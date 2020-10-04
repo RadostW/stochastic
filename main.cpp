@@ -34,8 +34,7 @@ class tdouble //double with taylor expansion
         array< array<double, maxvars>, maxvars> nhes;
         
         for(int i=0;i<maxvars;i++)ngr[i] = gr[i]*der(x);
-        
-        // TODO: hessian support
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = hes[i][j]*der(x) + gr[i]*gr[j]*dder(x);
         
         return tdouble(nx,ngr,nhes);
     }
@@ -46,8 +45,7 @@ class tdouble //double with taylor expansion
         array< array<double, maxvars>, maxvars> nhes;
         
         for(int i=0;i<maxvars;i++)ngr[i] = -gr[i]*(1/x)*(1/x);
-        
-        // TODO: hessian support
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = -hes[i][j]*(1/x)*(1/x) + gr[i]*gr[j]*(2/(x*x*x));
         
         return tdouble(nx,ngr,nhes);
     }
@@ -62,8 +60,7 @@ class tdouble //double with taylor expansion
         array<double,maxvars> ngr;
         array< array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = (rhs.gr)[i] + (this->gr)[i];
-        
-        //TODO: add hessian support
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs.hes[i][j] + (this->hes)[i][j];
         
         return tdouble(nx,ngr,nhes);
     }
@@ -74,46 +71,42 @@ class tdouble //double with taylor expansion
         array<double,maxvars> ngr;
         array< array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = (this->gr)[i];
-        
-        //TODO: add hessian support
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=(this->hes)[i][j];
         
         return tdouble(nx,ngr,nhes);
     }
-    //multiplicaiton with type 
+    //multiplicaiton with scalar
     tdouble operator*(const double& rhs) const
     {
         double nx = x * rhs;
         array<double,maxvars> ngr;
         array< array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = rhs*(this->gr)[i];
-        
-        //TODO: add hessian support
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs*(this->hes)[i][j];
         
         return tdouble(nx,ngr,nhes);
     }
-    //multiplication with scalar
+    //multiplication with type
     tdouble operator*(const tdouble& rhs) const
     {
         double nx = this->x * rhs.x;
         array<double,maxvars> ngr;
         array< array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = x*(rhs.gr)[i] + rhs.x * (this->gr)[i];
-        
-        //TODO: add hessian support
+        auto x1 = this->x;
+        auto x2 = rhs.x;
+        auto hes1 = this->hes;
+        auto hes2 = rhs.hes;
+        auto g1 = this->gr;
+        auto g2 = rhs.gr;
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j] = g1[i]*g2[j]+g2[i]*g1[j]+x1*hes2[i][j]+x2*hes1[i][j];
         
         return tdouble(nx,ngr,nhes);
     }
     //division by type
     tdouble operator/(const tdouble&rhs) const
     {
-        double nx = x / rhs.x;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
-        for(int i=0;i<maxvars;i++)ngr[i] = (-x*(rhs.gr)[i] + rhs.x * (this->gr)[i])/(rhs.x*rhs.x);
-        
-        //TODO: add hessian support
-        
-        return tdouble(nx,ngr,nhes);
+        return (*this)*rhs.inverse();
     }
     //division by scalar
     tdouble operator/(const double rhs) const
@@ -134,6 +127,17 @@ class tdouble //double with taylor expansion
                 text+=std::to_string(q.gr[i]);
                 text+="D";
                 text+=std::to_string(i);
+            }
+        }
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)
+        {
+            if(q.hes[i][j]!=0)
+            {
+                text+=q.hes[i][j]>0?"+":"";
+                text+=std::to_string(q.hes[i][j]);
+                text+="D";
+                text+=std::to_string(i);
+                text+=std::to_string(j);
             }
         }
         return s << text;
