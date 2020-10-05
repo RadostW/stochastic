@@ -3,6 +3,9 @@
 #include<string>
 #include<iostream>
 #include<cmath>
+#include<random>
+#include<vector>
+
 using namespace std;
 #define maxvars 10
 
@@ -19,6 +22,18 @@ class tdouble //double with taylor expansion
         hes = nhes;
     }
     public:
+    const array<double,maxvars> get_gradient()
+    {
+        return gr;
+    }
+    const array< array<double,maxvars>, maxvars> get_hessian()
+    {
+        return hes;
+    }
+    const double get_value()
+    {
+        return x;
+    }
     tdouble(double val,int id) //create a new variable
     {
         if(id > maxvars) throw 0xBAD;
@@ -150,7 +165,7 @@ tdouble operator+(double lhs,const tdouble& rhs)
     return rhs+lhs;
 } 
 
-tdouble operator-(tdouble& lhs,const tdouble& rhs)
+tdouble operator-(const tdouble& lhs,const tdouble& rhs)
 {
     return lhs+rhs*(-1);
 }
@@ -257,6 +272,64 @@ tdouble b_term(tdouble x)
 }
 // stochastic equation to be solved:
 // dX = a_term(x) dt + b_term(x) dW
+
+
+class ItoProcess
+{
+    // Used for obtaining trajectories from equation of type
+    // dX = a(x) dt + b(x) dW
+    public:
+    ItoProcess( tdouble nfa(tdouble),tdouble nfb(tdouble) )
+    {
+        fa = nfa;
+        fb = nfb;
+        normal = normal_distribution<double>(0.0,1.0);
+    }
+
+    vector<double> SampleEuler( tdouble x0, double tmax , double dt)
+    {
+        double t=0;
+        tdouble x=tdouble(x0.get_value(),0);
+        vector<double> res;
+        
+        for(int i=0;dt*i < tmax;i++)
+        {
+            res.push_back(x.get_value());
+            double a = fa(x).get_value();
+            double b = fb(x).get_value();
+            double dW = draw_normal()*sqrt(dt);
+            x = tdouble(x.get_value() + a*dt + b*dW,0);
+        }       
+    }
+
+    vector<double> SampleMilstein( tdouble x0, double tmax , double dt)
+    {
+        double t=0;
+        tdouble x=tdouble(x0.get_value(),0);
+        vector<double> res;
+        
+        for(int i=0;dt*i < tmax;i++)
+        {
+            res.push_back(x.get_value());
+            double a = fa(x).get_value();
+            tdouble fbval = fb(x);
+            double b = fbval.get_value();
+            double bp = fbval.get_gradient()[0];
+            double dW = draw_normal()*sqrt(dt);
+            x = tdouble(x.get_value() + a*dt + b*dW + 0.5*b*bp*(dW*dW - dt),0);
+        }
+    }
+
+    private:
+    tdouble (*fa)(tdouble);
+    tdouble (*fb)(tdouble);
+    default_random_engine generator;
+    normal_distribution<double> normal;
+    double draw_normal()
+    {   
+        return normal(generator);
+    }
+};
 
 int main()
 {
