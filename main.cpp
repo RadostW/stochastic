@@ -10,7 +10,7 @@ const double ceiling = 50.;
 tdouble mobility(tdouble location)
 {
     tdouble x = 1.0 / location;
-    tdobule mobdown = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
+    tdouble mobdown = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
     x = 1.0 / (ceiling - location);
     tdouble mobup = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
     return location > (0.5*ceiling) ? mobup : mobdown;
@@ -48,18 +48,20 @@ int main()
     out = fopen("toplot.dat","w");
 
     ItoProcess proc = ItoProcess(a_term,b_term);
-    auto res1 =  proc.SampleEuler(5,50,0.1);
-    for (vector<double>::iterator i = res1.begin(); i != res1.end(); i++)
-    {
-        std::cout << *i << ' ';
-        fprintf(out,"%lf\n",*i);
-    }
-
+    
     cout<<"\n\n";
-    auto res2 =  proc.SampleMilstein(5,50,0.1);
-    for (vector<double>::iterator i = res2.begin(); i != res2.end(); i++)
+    double x0 = 10;
+    double tmax = 100;
+    double dt = 0.05;
+    auto res1 =  proc.SampleMilstein(x0,tmax,dt);
+    auto res2 =  proc.SampleMilstein(x0,tmax,dt);
+    auto res3 =  proc.SampleMilstein(x0,tmax,dt);
+    auto res4 =  proc.SampleMilstein(x0,tmax,dt);
+    auto res5 =  proc.SampleMilstein(x0,tmax,dt);
+
+    for (int i=0; i<res1.size();i++)
     {
-        std::cout << *i << ' ';
+        fprintf(out,"%lf %lf %lf %lf %lf\n",res1[i],res2[i],res3[i],res4[i],res5[i]);
     }
 
 
