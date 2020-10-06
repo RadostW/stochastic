@@ -1,10 +1,4 @@
-#include<stdio.h>
 #include<array>
-#include<string>
-#include<iostream>
-#include<cmath>
-#include<random>
-#include<vector>
 
 using namespace std;
 #define maxvars 10

@@ -1,9 +1,3 @@
-#include<stdio.h>
-#include<array>
-#include<string>
-#include<iostream>
-#include<cmath>
-#include<random>
 #include<vector>
 #include "pmath.cpp"
 #include "tdouble.cpp"
