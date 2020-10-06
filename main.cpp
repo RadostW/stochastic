@@ -10,7 +10,7 @@ const double ceiling = 50.;
 tdouble mobility(tdouble location)
 {
     tdouble x = 1.0 / location;
-    tdobule mobdown = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
+    tdouble mobdown = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
     x = 1.0 / (ceiling - location);
     tdouble mobup = 0.986292 - x - 0.00688*cos(10.86762 + 8.092*x) + 0.02057*sin(2.506 + x*(3.074 + 2.227*x));
     return location > (0.5*ceiling) ? mobup : mobdown;
