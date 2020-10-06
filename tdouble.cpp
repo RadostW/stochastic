@@ -215,6 +215,10 @@ bool operator!= (const double &x, const tdouble &y){
 }
 
 
+tdouble operator-(const tdouble &q){
+    return q*(-1.);
+}
+
 tdouble operator+(double lhs,const tdouble& rhs)
 {
     return rhs+lhs;
