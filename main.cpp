@@ -1,4 +1,5 @@
 #include<vector>
+#include<stdio.h>
 #include "pmath.cpp"
 #include "tdouble.cpp"
 #include "itoprocess.cpp"
@@ -33,16 +34,21 @@ tdouble b_term(tdouble x)
 
 int main()
 {
+
+    FILE* out;
+    out = fopen("toplot.dat","w");
+
     ItoProcess proc = ItoProcess(a_term,b_term);
-    auto res =  proc.SampleEuler(5,50,0.1);
-    for (vector<double>::iterator i = res.begin(); i != res.end(); i++)
+    auto res1 =  proc.SampleEuler(5,50,0.1);
+    for (vector<double>::iterator i = res1.begin(); i != res1.end(); i++)
     {
         std::cout << *i << ' ';
+        fprintf(out,"%lf\n",*i);
     }
 
     cout<<"\n\n";
-    res =  proc.SampleMilstein(5,50,0.1);
-    for (vector<double>::iterator i = res.begin(); i != res.end(); i++)
+    auto res2 =  proc.SampleMilstein(5,50,0.1);
+    for (vector<double>::iterator i = res2.begin(); i != res2.end(); i++)
     {
         std::cout << *i << ' ';
     }
