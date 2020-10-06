@@ -299,7 +299,8 @@ class ItoProcess
             double b = fb(x).get_value();
             double dW = draw_normal()*sqrt(dt);
             x = tdouble(x.get_value() + a*dt + b*dW,0);
-        }       
+        }
+        return res;       
     }
 
     vector<double> SampleMilstein( double x0, double tmax , double dt)
@@ -318,6 +319,7 @@ class ItoProcess
             double dW = draw_normal()*sqrt(dt);
             x = tdouble(x.get_value() + a*dt + b*dW + 0.5*b*bp*(dW*dW - dt),0);
         }
+        return res;
     }
 
     vector<double> SampleWagnerPlaten( double x0, double tmax , double dt)
@@ -352,8 +354,8 @@ class ItoProcess
                         0.5*b*(b*bpp+bp*bp)*((1./3.)*dW*dW-dt)*dW
                         ,0);
         }
+        return res;
     }
-
 
     private:
     tdouble (*fa)(tdouble);
@@ -368,7 +370,10 @@ class ItoProcess
 
 int main()
 {
-    tdouble x(1,0);
-    tdouble y(1,1);
-    cout << 1-sqrt(x+2*y)/x;
+    ItoProcess proc = ItoProcess(a_term,b_term);
+    auto res =  proc.SampleEuler(3,5,0.1);
+
+    for (vector<double>::iterator i = res.begin(); i != res.end(); i++){
+    std::cout << *i << ' ';
+    }
 }
