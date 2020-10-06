@@ -122,6 +122,28 @@ class tdouble //double with taylor expansion
     {
         return (*this)*(1/rhs);
     }
+
+    //comparison operators
+    bool operator< (const tdouble &y){
+        return x < y.x;
+    }
+    bool operator<= (const tdouble &y){
+        return x <= y.x;
+    }
+    bool operator> (const tdouble &y){
+        return x > y.x;
+    }
+    bool operator>= (const tdouble &y){
+        return x >= y.x;
+    }
+    bool operator== (const tdouble &y){
+        return x == y.x;
+    }
+    bool operator!= (const tdouble &y){
+        return x != y.x;
+    }
+    
+    
     
     //printer
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
