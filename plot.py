@@ -2,5 +2,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-plt.plot([float(x) for x in open('toplot.dat').readlines()])
+import pandas as pd
+pd.read_table('toplot.dat', sep=' ', header=None).plot()
 plt.savefig('plot.png')
