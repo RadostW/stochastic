@@ -123,26 +123,45 @@ class tdouble //double with taylor expansion
         return (*this)*(1/rhs);
     }
 
-    //comparison operators
-    bool operator< (const tdouble &y){
+    //comparison operators tdouble
+    bool operator< (const tdouble &y) const {
         return x < y.x;
     }
-    bool operator<= (const tdouble &y){
+    bool operator<= (const tdouble &y) const {
         return x <= y.x;
     }
-    bool operator> (const tdouble &y){
+    bool operator> (const tdouble &y) const {
         return x > y.x;
     }
-    bool operator>= (const tdouble &y){
+    bool operator>= (const tdouble &y) const {
         return x >= y.x;
     }
-    bool operator== (const tdouble &y){
+    bool operator== (const tdouble &y) const {
         return x == y.x;
     }
-    bool operator!= (const tdouble &y){
+    bool operator!= (const tdouble &y) const {
         return x != y.x;
     }
     
+    //comparison operators with double
+    bool operator< (double y) const {
+        return x < y;
+    }
+    bool operator<= (double y) const {
+        return x <= y;
+    }
+    bool operator> (double y) const {
+        return x > y;
+    }
+    bool operator>= (double y) const {
+        return x >= y;
+    }
+    bool operator== (double y) const {
+        return x == y;
+    }
+    bool operator!= (double y) const {
+        return x != y;
+    }
     
     
     //printer
@@ -174,6 +193,26 @@ class tdouble //double with taylor expansion
         return s << text;
     }
 };
+
+//comparison operators with double
+bool operator< (double x, const tdouble &y){
+    return y > x;
+}
+bool operator<= (const double &x, const tdouble &y){
+    return y >= x;
+}
+bool operator> (const double &x, const tdouble &y){
+    return y < x;
+}
+bool operator>= (const double &x, const tdouble &y){
+    return y <= x;
+}
+bool operator== (const double &x, const tdouble &y){
+    return y == x;
+}
+bool operator!= (const double &x, const tdouble &y){
+    return y != x;
+}
 
 
 tdouble operator+(double lhs,const tdouble& rhs)
