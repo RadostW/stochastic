@@ -33,3 +33,6 @@
 
 # Datafiles
 *.dat
+
+# Vscode garbage
+.vscode/
