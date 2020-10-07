@@ -1,8 +1,10 @@
 #include<iostream>
 #include<random>
 #include<vector>
+#include<cmath>
+#include<map>
 
-
+using namespace std;
 
 class ItoProcess
 {
@@ -14,7 +16,39 @@ class ItoProcess
         fa = nfa;
         fb = nfb;
         normal = normal_distribution<double>(0.0,1.0);
+        WeinerPath[0.]=0.;
     }
+    double WeinerValue(double t)
+    {
+        if(t < 0)
+        {
+            return 0;
+        }
+        else if(WeinerPath.count(t) == 1) // Repeated ask for the same value
+        {
+            return WeinerPath[t];
+        }
+        
+        
+        auto lower = WeinerPath.lower_bound(t);
+        if(lower == WeinerPath.end()) // Beyond rightmost sample
+        {
+            lower--;
+            double z = DrawNormal();
+            WeinerPath[t] = sqrt(t-lower->first)*z+lower->second;
+            return WeinerPath[t];
+        }
+        else
+        {
+            throw logic_error("Weiner subsampling not implemented");
+        }
+    }
+    void WeinerResample()
+    {
+        WeinerPath.clear();
+        WeinerPath[0.]=0.;
+    }
+    
 
     vector<double> SampleEuler( double x0, double tmax , double dt)
     {
@@ -27,7 +61,7 @@ class ItoProcess
             res.push_back(x.get_value());
             double a = fa(x).get_value();
             double b = fb(x).get_value();
-            double dW = draw_normal()*sqrt(dt);
+            double dW = WeinerValue((i+1)*dt)-WeinerValue(i*dt);
             x = tdouble(x.get_value() + a*dt + b*dW,0);
         }
         return res;       
@@ -46,7 +80,7 @@ class ItoProcess
             tdouble fbval = fb(x);
             double b = fbval.get_value();
             double bp = fbval.get_gradient()[0];
-            double dW = draw_normal()*sqrt(dt);
+            double dW = WeinerValue((i+1)*dt)-WeinerValue(i*dt);
             x = tdouble(x.get_value() + a*dt + b*dW + 0.5*b*bp*(dW*dW - dt),0);
         }
         return res;
@@ -71,9 +105,10 @@ class ItoProcess
             double bp = fbval.get_gradient()[0];
             double bpp = fbval.get_hessian()[0][0];
 
-            double z1 = draw_normal();
-            double z2 = draw_normal();
-            double dW = z1*sqrt(dt);
+            double z1 = DrawNormal();
+            double z2 = DrawNormal();
+            double dW = WeinerValue((i+1)*dt)-WeinerValue(i*dt);
+            z1 = dW*(1/sqrt(dt));
             double dZ = 0.5*(z1+z2/sqrt(3))*dt*sqrt(dt);
 
 
@@ -92,8 +127,10 @@ class ItoProcess
     tdouble (*fb)(tdouble);
     default_random_engine generator;
     normal_distribution<double> normal;
-    double draw_normal()
+    double DrawNormal()
     {   
         return normal(generator);
     }
+    map<double,double> WeinerPath;
+    map<double,double> ZetReported;
 };
