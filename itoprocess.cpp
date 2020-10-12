@@ -186,6 +186,14 @@ private:
     {
         // TODO implement
         // Add new meshpoint at s
+        if(WeinerPath.count(s) != 0) throw logic_error('mesh refine wrong arg');
+        auto lower = WeinerPath.lower_bound(s);
+        auto upper = WeinerPath.upper_bound(s);
+        double dW = upper->second - lower->second;
+        double Z = ZetReported[upper->first];
+
+        auto means = conditionalMean(lower->second, upper->second, dW, Z);
+        auto varsAndcorr = conditionalVarsAndCorr(lower->second, upper->second, dW, Z);
     }
     double DrawNormal()
     {
