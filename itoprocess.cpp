@@ -41,7 +41,7 @@ public:
         else
         {
             RefineMesh(t);
-            if(WeinerPath.cont(t) == 1)
+            if(WeinerPath.count(t) == 1)
             {
                 return WeinerPath[t];
             }
@@ -66,8 +66,8 @@ public:
         auto upper = ZetReported.upper_bound(b);
         if (lower == ZetReported.end()) // Interval beyond mesh
         {
-            ZetValue(ZetReported.rbegin->first,a); // Sample interval on the left of requested
-            ZetValue(a,b);
+            ZetValue((ZetReported.rbegin())->first,a); // Sample interval on the left of requested
+            return ZetValue(a,b);
         }
         else if (next(lower) == ZetReported.end() && upper == ZetReported.end()) // Interval at left edge of mesh
         {
@@ -110,10 +110,10 @@ public:
             for(auto it = lower;lower!=upper;lower++)
             {
                 t1 = next(it)->first;
-                accumulator += next(it)->second;
-                accumulator +=(t1-t0)*(WeinerValue(t1)-W0);
+                accumualtor += next(it)->second;
+                accumualtor +=(t1-t0)*(WeinerValue(t1)-W0);
             }
-            return accumulator;
+            return accumualtor;
         }
     }
 
@@ -196,7 +196,7 @@ private:
     {
         // TODO implement
         // Add new meshpoint at s
-        if(WeinerPath.count(s) != 0) throw logic_error('mesh refine wrong arg');
+        if(WeinerPath.count(s) != 0) throw logic_error("mesh refine wrong arg");
         auto lower = WeinerPath.lower_bound(s);
         auto upper = WeinerPath.upper_bound(s);
         double dW = upper->second - lower->second;
@@ -204,6 +204,17 @@ private:
 
         auto means = conditionalMean(lower->second, upper->second, dW, Z);
         auto varsAndcorr = conditionalVarsAndCorr(lower->second, upper->second, dW, Z);
+
+        double midW;
+        double midZ;
+        double cov = varsAndcorr[2]*sqrt(varsAndcorr[1]*varsAndcorr[2]);
+        DrawCovaried(varsAndcorr[0], cov, varsAndcorr[1], midW, midZ);
+        midW += means[0];
+        midZ += means[1];
+
+        WeinerPath[s] = lower->second + midW;
+        ZetReported[s] = midZ;
+        ZetReported[upper->first] = Z-midZ-midW*(upper->second -s);
     }
     double DrawNormal()
     {
@@ -226,21 +237,22 @@ private:
     }
     map<double, double> WeinerPath;
     map<double, double> ZetReported; // Values of reported I(0,1) integral at given intervals, saved on rhs.
+    
+    array<double, 2> conditionalMean(double s, double t, double w, double z)
+    {
+        // E(W0s, Z0s | W0t=w, Z0t=z)
+        double mean_w0s = s*(w*(3*s*t-2*t*t)+z*6*(t-s))/(t*t*t);
+        double mean_z0s = s*s*(w*(s*t-t*t)+z*(3*t-2*s))/(t*t*t);
+        return array<double, 2> {mean_w0s, mean_z0s};
+    }
+
+    array<double, 3> conditionalVarsAndCorr(double s, double t, double w, double z)
+    {
+        // Var(W0s), Var(Z0s) and Corr(W0s, Z0s) given W0t=w, Z0t=z
+        double var_w0s = -s*(s-t)*(3*s*s-3*s*t+t*t)/(t*t*t);
+        double var_z0s = -s*s*s*(s-t)*(s-t)*(s-t)/(3*t*t*t);
+        double corr = sqrt(3.)*(t-2*s)/(2*sqrt(3*s*s-3*s*t+t*t));
+        return array<double, 3> {var_w0s, var_z0s, corr};
+    }
 };
 
-array<double, 2> conditionalMean(double s, double t, double w, double z)
-{
-    // E(W0s, Z0s | W0t=w, Z0t=z)
-    double mean_w0s = s*(w*(3*s*t-2*t*t)+z*6*(t-s))/(t*t*t);
-    double mean_z0s = s*s*(w*(s*t-t*t)+z*(3*t-2*s))/(t*t*t);
-    return array<double, 2> {mean_w0s, mean_z0s};
-}
-
-array<double, 3> conditionalVarsAndCorr(double s, double t, double w, double z)
-{
-    // Var(W0s), Var(Z0s) and Corr(W0s, Z0s) given W0t=w, Z0t=z
-    double var_w0s = -s*(s-t)*(3*s*s-3*s*t+t*t)/(t*t*t);
-    double var_z0s = -s*s*s*(s-t)*(s-t)*(s-t)/(3*t*t*t);
-    double corr = sqrt(3.)*(t-2*s)/(2*sqrt(3*s*s-3*s*t+t*t));
-    return array<double, 3> {var_w0s, var_z0s, corr};
-}
