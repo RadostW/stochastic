@@ -33,10 +33,15 @@ public:
         auto lower = WeinerPath.lower_bound(t);
         if (lower == WeinerPath.end()) // Beyond rightmost sample
         {
-            lower--;
-            double z = DrawNormal();
-            WeinerPath[t] = sqrt(t - lower->first) * z + lower->second;
-            return WeinerPath[t];
+            ExtendMesh(t);
+            if(WeinerPath.count(t) == 1)
+            {
+                return WeinerPath[t];
+            }
+            else
+            {
+                throw logic_error("WeinerPath: Subsampling failure"); 
+            }            
         }
         else
         {
@@ -71,15 +76,16 @@ public:
         }
         else if (next(lower) == ZetReported.end() && upper == ZetReported.end()) // Interval at left edge of mesh
         {
-            double dW = WeinerValue(b) - WeinerValue(a);
-            double dt = b - a;
-
-            double z1 = dW * (1. / sqrt(b - a));
-            double z2 = DrawNormal();
-
-            double dZ = 0.5 * (z1 + z2 / sqrt(3)) * dt * sqrt(dt);
-            ZetReported[b] = dZ;
-            return dZ;
+            ExtendMesh(b);
+            if(ZetReported.count(b) != 1)
+            {
+                throw logic_error("ZetReported: Subsampling failure"); 
+            }
+            else
+            {
+                ZetReported[b] = dZ;
+                return dZ;
+            }   
         }
         else if (lower->first == a && upper->first == b && next(lower) == upper) // Re-report mesh interval
         {
