@@ -48,21 +48,7 @@ int main()
     ItoProcess proc = ItoProcess(a_term, b_term);
 
     proc.WeinerValue(3.);
+    
     proc.WeinerValue(1.);
     proc.WeinerValue(2.);
-    /*double x0 = 10;
-    double tmax = 100;
-    double dt = 1;
-    auto res1 = proc.SampleWagnerPlaten(x0, tmax, dt);
-    auto res2 = proc.SampleMilstein(x0, tmax, dt);
-    auto res3 = proc.SampleMilstein(x0, tmax, dt);
-    proc.WeinerResample();
-    auto res4 = proc.SampleMilstein(x0, tmax, dt);
-    auto res5 = proc.SampleMilstein(x0, tmax, dt);
-
-    for (int i = 0; i < res1.size(); i++)
-    {
-        fprintf(out, "%lf %lf %lf %lf %lf\n", res1[i], res2[i], res3[i], res4[i], res5[i]);
-    }
-    cout << "Done" << endl;*/
 }
