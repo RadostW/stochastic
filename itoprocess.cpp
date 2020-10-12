@@ -209,6 +209,13 @@ private:
         x = sqrt(1-cor*cor)*z1 + cor*z2;
         y = z2;
     }
+    void DrawCovaried(double xx,double xy,double yy, double &x,double &y)
+    {
+        // Set x,y to sample of N(0,{{xx,xy},{xy,yy}}) dist
+        DrawCorrelated(xy/sqrt(xx*yy),x,y);
+        x = sqrt(xx) * x;
+        y = sqrt(yy) * y;
+    }
     map<double, double> WeinerPath;
     map<double, double> ZetReported; // Values of reported I(0,1) integral at given intervals, saved on rhs.
 };
