@@ -83,8 +83,7 @@ public:
             }
             else
             {
-                ZetReported[b] = dZ;
-                return dZ;
+                return ZetReported[b];
             }   
         }
         else if (lower->first == a && upper->first == b && next(lower) == upper) // Re-report mesh interval
@@ -204,13 +203,16 @@ private:
         // TODO implement
         // Add new meshpoint at s
         if(WeinerPath.count(s) != 0) throw logic_error("mesh refine wrong arg");
-        auto lower = WeinerPath.lower_bound(s);
+        auto lower = --WeinerPath.lower_bound(s);
         auto upper = WeinerPath.upper_bound(s);
         double dW = upper->second - lower->second;
         double Z = ZetReported[upper->first];
 
-        auto means = conditionalMean(lower->first, upper->first, dW, Z);
-        auto varsAndcorr = conditionalVarsAndCorr(lower->first, upper->first, dW, Z);
+        double t0 = lower->first;
+        double t1 = s;
+        double t2 = upper->first;
+        auto means = conditionalMean(t1-t0, t2-t0, dW, Z);
+        auto varsAndcorr = conditionalVarsAndCorr(t1-t0, t2-t0, dW, Z);
 
         double midW;
         double midZ;
