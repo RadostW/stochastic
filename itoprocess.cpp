@@ -58,7 +58,8 @@ public:
         auto upper = ZetReported.upper_bound(b);
         if (lower == ZetReported.end())
         {
-            throw logic_error("Weiner extrapolation not implemented");
+            ZetValue(ZetReported.rbegin->first,a); // Sample interval on the left of requested
+            ZetValue(a,b);
         }
         else if (next(lower) == ZetReported.end() && upper == ZetReported.end())
         {
