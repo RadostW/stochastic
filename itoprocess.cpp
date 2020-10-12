@@ -40,7 +40,15 @@ public:
         }
         else
         {
-            throw logic_error("Weiner subsampling not implemented");
+            RefineMesh(t);
+            if(WeinerPath.cont(t) == 1)
+            {
+                return WeinerPath[t];
+            }
+            else
+            {
+                throw logic_error("WeinerPath: Subsampling failure"); 
+            }
         }
     }
     void WeinerResample()
@@ -56,12 +64,12 @@ public:
         // int_a^b int_a^q ds dW_q
         auto lower = ZetReported.lower_bound(a);
         auto upper = ZetReported.upper_bound(b);
-        if (lower == ZetReported.end())
+        if (lower == ZetReported.end()) // Interval beyond mesh
         {
             ZetValue(ZetReported.rbegin->first,a); // Sample interval on the left of requested
             ZetValue(a,b);
         }
-        else if (next(lower) == ZetReported.end() && upper == ZetReported.end())
+        else if (next(lower) == ZetReported.end() && upper == ZetReported.end()) // Interval at left edge of mesh
         {
             double dW = WeinerValue(b) - WeinerValue(a);
             double dt = b - a;
@@ -73,14 +81,29 @@ public:
             ZetReported[b] = dZ;
             return dZ;
         }
-        else if (lower->first == a && upper->first == b && next(lower) == upper)
+        else if (lower->first == a && upper->first == b && next(lower) == upper) // Re-report mesh interval
         {
-            // Alreay reported this interval, report again
             return upper->second;
         }
         else
         {
-            throw logic_error("Weiner subsampling not implemented");
+            if(lower->first!=a) // Missing meshpoint
+            {
+                RefineMesh(a);
+            }
+            if(upper->first!=b) // Missing meshpoint
+            {
+                RefineMesh(b);
+            }
+
+            lower = ZetReported.lower_bound(a);
+            upper = ZetReported.upper_bound(b);
+            
+            double accumualtor = 0;
+            for(auto it = lower;lower!=upper;lower++)
+            {
+                //TODO implement
+            }
         }
     }
 
@@ -159,6 +182,11 @@ private:
     tdouble (*fb)(tdouble);
     default_random_engine generator;
     normal_distribution<double> normal;
+    void MeshRefine(double s)
+    {
+        // TODO implement
+        // Add new meshpoint at s
+    }
     double DrawNormal()
     {
         return normal(generator);
