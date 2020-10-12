@@ -165,3 +165,20 @@ private:
     map<double, double> WeinerPath;
     map<double, double> ZetReported; // Values of reported I(0,1) integral at given intervals, saved on rhs.
 };
+
+array<double, 2> conditionalMean(double s, double t, double w, double z)
+{
+    // E(W0s, Z0s | W0t=w, Z0t=z)
+    double mean_w0s = s*(w*(3*s*t-2*t*t)+z*6*(t-s))/(t*t*t);
+    double mean_z0s = s*s*(w*(s*t-t*t)+z*(3*t-2*s))/(t*t*t);
+    return array<double, 2> {mean_w0s, mean_z0s};
+}
+
+array<double, 3> conditionalVarsAndCorr(double s, double t, double w, double z)
+{
+    // Var(W0s), Var(Z0s) and Corr(W0s, Z0s) given W0t=w, Z0t=z
+    double var_w0s = -s*(s-t)*(3*s*s-3*s*t+t*t)/(t*t*t);
+    double var_z0s = -s*s*s*(s-t)*(s-t)*(s-t)/(3*t*t*t);
+    double corr = sqrt(3.)(t-2*s)/(2*sqrt(3*s*s-3*s*t+t*t));
+    return array<double, 3> {var_w0s, var_z0s, corr};
+}
