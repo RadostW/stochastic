@@ -163,6 +163,14 @@ private:
     {
         return normal(generator);
     }
+    void DrawCorrelated(double cor, double &x,double &y)
+    {
+        // Set x,y to correlated normal samples with Cor(x,y)=cor
+        double z1 = DrawNormal();
+        double z2 = DrawNormal();
+        x = sqrt(1-cor*cor)*z1 + cor*z2;
+        y = z2;
+    }
     map<double, double> WeinerPath;
     map<double, double> ZetReported; // Values of reported I(0,1) integral at given intervals, saved on rhs.
 };
