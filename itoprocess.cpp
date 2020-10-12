@@ -21,39 +21,30 @@ public:
     }
     double WeinerValue(double t)
     {
+
         if (t < 0)
         {
             return 0;
         }
         else if (WeinerPath.count(t) == 1) // Repeated ask for the same value
         {
-            return WeinerPath[t];
         }
-
-        auto lower = WeinerPath.lower_bound(t);
-        if (lower == WeinerPath.end()) // Beyond rightmost sample
+        else if ( WeinerPath.lower_bound(t) == WeinerPath.end() ) // Beyond mesh on the right
         {
             ExtendMesh(t);
-            if(WeinerPath.count(t) == 1)
-            {
-                return WeinerPath[t];
-            }
-            else
-            {
-                throw logic_error("WeinerPath: Subsampling failure"); 
-            }            
         }
-        else
+        else // Between mesh points
         {
             RefineMesh(t);
-            if(WeinerPath.count(t) == 1)
-            {
-                return WeinerPath[t];
-            }
-            else
-            {
-                throw logic_error("WeinerPath: Subsampling failure"); 
-            }
+        }
+
+        if(WeinerPath.count(t) != 1)
+        {
+             throw logic_error("WeinerPath: Subsampling failure"); 
+        }
+        else
+        {   
+            return WeinerPath[t];
         }
     }
     void WeinerResample()
