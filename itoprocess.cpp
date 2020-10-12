@@ -104,14 +104,14 @@ public:
             }
             
             double accumualtor = 0;
-            double t0 = a;
-            double W0 = WeinerValue(a);
+            double tm = b;
             double t1;
             for(auto it = lower;lower!=upper;lower++)
             {
+                t0 = it->first;
                 t1 = next(it)->first;
                 accumulator += next(it)->second;
-                accumulator +=(t1-t0)*(WeinerValue(t1)-W0);
+                accumulator += (WeinerValue(t1)-WeinerValue(t0))*(tm - t1);
             }
             return accumulator;
         }
