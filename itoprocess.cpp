@@ -203,8 +203,8 @@ private:
         double dW = upper->second - lower->second;
         double Z = ZetReported[upper->first];
 
-        auto means = conditionalMean(lower->second, upper->second, dW, Z);
-        auto varsAndcorr = conditionalVarsAndCorr(lower->second, upper->second, dW, Z);
+        auto means = conditionalMean(lower->first, upper->first, dW, Z);
+        auto varsAndcorr = conditionalVarsAndCorr(lower->first, upper->first, dW, Z);
 
         double midW;
         double midZ;
