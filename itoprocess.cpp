@@ -98,12 +98,22 @@ public:
 
             lower = ZetReported.lower_bound(a);
             upper = ZetReported.upper_bound(b);
+            if(lower->first != a || upper->first != b)
+            {
+                throw logic_error("ZetReported: Subsampling failure"); 
+            }
             
             double accumualtor = 0;
+            double t0 = a;
+            double W0 = WeinerValue(a);
+            double t1;
             for(auto it = lower;lower!=upper;lower++)
             {
-                //TODO implement
+                t1 = next(it)->first;
+                accumulator += next(it)->second;
+                accumulator +=(t1-t0)*(WeinerValue(t1)-W0);
             }
+            return accumulator;
         }
     }
 
@@ -182,7 +192,7 @@ private:
     tdouble (*fb)(tdouble);
     default_random_engine generator;
     normal_distribution<double> normal;
-    void MeshRefine(double s)
+    void RefineMesh(double s)
     {
         // TODO implement
         // Add new meshpoint at s
