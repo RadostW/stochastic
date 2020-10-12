@@ -103,17 +103,18 @@ public:
                 throw logic_error("ZetReported: Subsampling failure"); 
             }
             
-            double accumualtor = 0;
-            double t0 = a;
-            double W0 = WeinerValue(a);
+            double accumulator = 0;
+            double tm = b;
             double t1;
+            double t0;
             for(auto it = lower;lower!=upper;lower++)
             {
+                t0 = it->first;
                 t1 = next(it)->first;
-                accumualtor += next(it)->second;
-                accumualtor +=(t1-t0)*(WeinerValue(t1)-W0);
+                accumulator += next(it)->second;
+                accumulator += (WeinerValue(t1)-WeinerValue(t0))*(tm - t1);
             }
-            return accumualtor;
+            return accumulator;
         }
     }
 
