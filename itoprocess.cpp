@@ -207,7 +207,7 @@ private:
 
         double midW;
         double midZ;
-        double cov = varsAndcorr[2]*sqrt(varsAndcorr[1]*varsAndcorr[2]);
+        double cov = varsAndcorr[2]*sqrt(varsAndcorr[0]*varsAndcorr[1]);
         DrawCovaried(varsAndcorr[0], cov, varsAndcorr[1], midW, midZ);
         midW += means[0];
         midZ += means[1];

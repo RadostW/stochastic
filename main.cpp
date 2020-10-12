@@ -47,8 +47,21 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    proc.WeinerValue(3.);
-    
-    proc.WeinerValue(1.);
-    proc.WeinerValue(2.);
+    for(int i=0;i<10;i++)
+    {
+        double x = rand()%100;
+        double tmp = proc.WeinerValue(x);
+        printf("%d: %lf %lf\n",i,x,tmp);
+    }
+    for(int i=0;i<100;i++)
+    {
+        proc.WeinerValue(i);
+    }
+
+    for(int i=0;i<100;i++)
+    {
+        fprintf(out,"%lf\n",proc.WeinerValue(i));
+    }
+
+    fclose(out);
 }
