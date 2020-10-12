@@ -217,6 +217,16 @@ private:
         ZetReported[s] = midZ;
         ZetReported[upper->first] = Z-midZ-midW*(upper->second -s);
     }
+    void ExtendMesh(double t)
+    {
+        auto last = WeinerPath.rbegin();
+        if(t<=last->first) throw logic_error("extend meash wrong arg");
+        double dt = t - last->second;
+        double dW, newZ;
+        DrawCovaried(dt, dt*dt/2, dt*dt*dt/3, dW, newZ);
+        WeinerPath[t] = dW + last->second;
+        ZetReported[t] = newZ;
+    }
     double DrawNormal()
     {
         return normal(generator);
