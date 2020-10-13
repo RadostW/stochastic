@@ -50,6 +50,7 @@ int main()
     proc.WeinerValue(3.);
     proc.WeinerValue(1.);
     proc.WeinerValue(2.);
+    int x;
     /*double x0 = 10;
     double tmax = 100;
     double dt = 1;
