@@ -45,44 +45,53 @@ private:
         {
             samplePoint newSamplePoint;
             double tMax = samplePoints.rbegin()->first;
-            drawIndependentWZ(tMax, t, lower->second.w, newSamplePoint.w, newSamplePoint.zToPrevPoint);
+            double lastW = samplePoints.rbegin()->second.w;
+            drawIndependentWZ(tMax, t, lastW, newSamplePoint.w, newSamplePoint.zToPrevPoint);
             samplePoints[t] = newSamplePoint;
         }
         else // between known values
         {
             double nextT = lower->first;
-            samplePoint nextSamplePoint = lower->second;
+            samplePoint & nextSamplePoint = lower->second;
             lower--;
             double prevT = lower->first;
             samplePoint prevSamplePoint = lower->second;
 
             samplePoint newSamplePoint;
             drawDependentWZ(prevT, t, nextT, prevSamplePoint.w, nextSamplePoint.w, nextSamplePoint.zToPrevPoint, newSamplePoint.w, newSamplePoint.zToPrevPoint);
-            nextSamplePoint.zToPrevPoint = nextSamplePoint.zToPrevPoint - newSamplePoint.zToPrevPoint - (nextT-t)*newSamplePoint.w;
+            nextSamplePoint.zToPrevPoint = nextSamplePoint.zToPrevPoint - newSamplePoint.zToPrevPoint - (nextT-t)*(newSamplePoint.w-prevSamplePoint.w);
             samplePoints[t] = newSamplePoint;
         }
     }
     void drawIndependentWZ(double t1, double t2, double wt1, double &wt2, double &zt1t2)
     {
-        // W(t2), Z(t1, t2) | W(t1)
+        // W(t2), Z(t1, t2) | W(t1); t1<t2
         double dt = t2 - t1;
         DrawCovaried(dt, dt*dt/2, dt*dt*dt/3, wt2, zt1t2);
         wt2 += wt1;
     }
     void drawDependentWZ(double t1, double t2, double t3, double wt1, double wt3, double zt1t3, double &wt2, double &zt1t2) 
     {
-        // W(t2), Z(t1, t2) | W(t1), W(t3), Z(t1, t3)
+        // W(t2), Z(t1, t2) | W(t1), W(t3), Z(t1, t3); t1<t2<t3
         double i1 = t2-t1;
         double i2 = t3-t2;
         double I = t3-t1;
-        double varwt2 =  i1*i2*(i1*i1-i1*i2+i2*i2)/(I*I*I);
+        
+        double varwt1t2 =  i1*i2*(i1*i1-i1*i2+i2*i2)/(I*I*I);
         double cov = i1*i1*i2*i2*(i2-i1)/(2*I*I*I);
-        double warzt1t2 = i1*i1*i1*i2*i2*i2/(3*I*I*I);
-        double dw = wt3-wt1;
-        DrawCovaried(varwt2, cov, warzt1t2, wt2, zt1t2);
-        zt1t2 += i1*i1*(-i1*(i1+i2)*dw+(i1+3*i2)*zt1t3)/(I*I*I);
-        wt2 += (i1*(i1-2*i2)*(i1+i2)*dw + 6*i1*i2*zt1t3)/(I*I*I);
-        wt2 += wt1;
+        double varzt1t2 = i1*i1*i1*i2*i2*i2/(3*I*I*I);
+        
+        double wt1t2;
+        
+        // sample centered gaussians with approprioate covs
+        DrawCovaried(varwt1t2, cov, varzt1t2, wt1t2, zt1t2);
+        
+        // add conditional mean
+        double wt1t3 = wt3-wt1;
+        wt1t2 += wt1t3*i1*(i1-2*i2)/(I*I)  + zt1t3*6*i1*i2/(I*I*I);
+        zt1t2 += wt1t3*(-1)*i1*i1*i2/(I*I) + zt1t3*i1*i1*(i1+3*i2)/(I*I*I);
+        
+        wt2 = wt1+wt1t2;
     }
 
     // sampling routines
@@ -115,18 +124,14 @@ int main()
     FILE *out;
     out = fopen("toplot.dat", "w");
 
-    /*for(int i=0;i<10;i++)
+    for(int i=0;i<10;i++)
     {
-        double x = rand()%100;
+        double x = rand()%1000;
         double tmp = w.getValue(x);
         printf("%d: %lf %lf\n",i,x,tmp);
     }
-    for(int i=0;i<100;i++)
-    {
-        w.getValue(i);
-    }*/
 
-    for(int i=0;i<100;i++)
+    for(double i=0;i<2000;i++)
     {
         fprintf(out,"%lf\n",w.getValue(i));
     }
