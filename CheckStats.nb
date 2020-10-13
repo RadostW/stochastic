@@ -1,0 +1,10 @@
+In[3]:= dat=Import[NotebookDirectory[]<>"toplot.dat"];
+In[8]:= incs=Differences[Flatten@dat];
+In[13]:= Show[
+Histogram[incs,Automatic,"PDF"],
+Plot[PDF[NormalDistribution[],x],{x,-3,3}]
+]
+Out[13]= 
+
+In[19]:= CorrelationFunction[incs,{20}][[2;;]]//BarChart
+Out[19]= 

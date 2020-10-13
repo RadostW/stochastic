@@ -27,10 +27,24 @@ public:
         ensureSamplePoint(t1);
         ensureSamplePoint(t2);
         double Z = 0.;
-        //it = samplePoints.lower_bound(t1);
-        //for(auto it = samplePoints.lower_bound(t1); it.;)
-        // TODO return Z
-        return 1.;
+
+        auto lower = samplePoints.lower_bound(t1);
+        auto upper = samplePoints.upper_bound(t2);
+        auto it = samplePoints.begin();
+        
+            
+        double accumulator = 0;
+        double tm = t2;
+        double ta, tb;
+        for(it = lower;lower!=upper;lower++)
+        {
+            ta = it->first;
+            tb = next(it)->first;
+            accumulator += next(it)->second.zToPrevPoint;
+            accumulator += (getValue(tb)-getValue(ta))*(tm - ta);
+        }
+        return accumulator;
+
     }
 
 private:
@@ -131,9 +145,9 @@ int main()
         printf("%d: %lf %lf\n",i,x,tmp);
     }
 
-    for(double i=0;i<2000;i++)
+    for(double i=1;i<2000;i++)
     {
-        fprintf(out,"%lf\n",w.getValue(i));
+        fprintf(out,"%lf %lf\n",w.getValue(i),w.getZ(i-1,i));
     }
 
     fclose(out);
