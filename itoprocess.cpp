@@ -220,7 +220,7 @@ private:
     {
         auto last = WeinerPath.rbegin();
         if(t<=last->first) throw logic_error("extend meash wrong arg");
-        double dt = t - last->second;
+        double dt = t - last->first;
         double dW, newZ;
         DrawCovaried(dt, dt*dt/2, dt*dt*dt/3, dW, newZ);
         WeinerPath[t] = dW + last->second;
