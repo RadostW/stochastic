@@ -48,6 +48,7 @@ int main()
     ItoProcess proc = ItoProcess(a_term, b_term);
 
     proc.WeinerValue(3.);
+    
     proc.WeinerValue(1.);
     proc.WeinerValue(2.);
     int x;
