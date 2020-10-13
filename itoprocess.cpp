@@ -203,12 +203,11 @@ private:
         double t1 = s;
         double t2 = upper->first;
         auto means = conditionalMean(t1-t0, t2-t0, dW, Z);
-        auto varsAndcorr = conditionalVarsAndCorr(t1-t0, t2-t0, dW, Z);
+        auto varsAndcorr = conditionalVarsAndCov(t1-t0, t2-t0, dW, Z);
 
         double midW;
         double midZ;
-        double cov = varsAndcorr[2]*sqrt(varsAndcorr[0]*varsAndcorr[1]);
-        DrawCovaried(varsAndcorr[0], cov, varsAndcorr[1], midW, midZ);
+        DrawCovaried(varsAndcorr[0], varsAndcorr[2], varsAndcorr[1], midW, midZ);
         midW += means[0];
         midZ += means[1];
 
@@ -256,13 +255,14 @@ private:
         return array<double, 2> {mean_w0s, mean_z0s};
     }
 
-    array<double, 3> conditionalVarsAndCorr(double s, double t, double w, double z)
+    array<double, 3> conditionalVarsAndCov(double s, double t, double w, double z)
     {
         // Var(W0s), Var(Z0s) and Corr(W0s, Z0s) given W0t=w, Z0t=z
         double var_w0s = -s*(s-t)*(3*s*s-3*s*t+t*t)/(t*t*t);
         double var_z0s = -s*s*s*(s-t)*(s-t)*(s-t)/(3*t*t*t);
         double corr = sqrt(3.)*(t-2*s)/(2*sqrt(3*s*s-3*s*t+t*t));
-        return array<double, 3> {var_w0s, var_z0s, corr};
+        double cov = corr*sqrt(var_w0s*var_z0s);
+        return array<double, 3> {var_w0s, var_z0s, cov};
     }
 };
 

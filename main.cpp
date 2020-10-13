@@ -47,16 +47,19 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    for(int i=0;i<10;i++)
-    {
-        double x = rand()%100;
-        double tmp = proc.WeinerValue(x);
-        printf("%d: %lf %lf\n",i,x,tmp);
-    }
-    for(int i=0;i<100;i++)
-    {
-        proc.WeinerValue(i);
-    }
+    proc.WeinerValue(3.);
+    proc.WeinerValue(1.);
+    proc.WeinerValue(2.);
+    int x;
+    /*double x0 = 10;
+    double tmax = 100;
+    double dt = 1;
+    auto res1 = proc.SampleWagnerPlaten(x0, tmax, dt);
+    auto res2 = proc.SampleMilstein(x0, tmax, dt);
+    auto res3 = proc.SampleMilstein(x0, tmax, dt);
+    proc.WeinerResample();
+    auto res4 = proc.SampleMilstein(x0, tmax, dt);
+    auto res5 = proc.SampleMilstein(x0, tmax, dt);
 
     for(int i=0;i<100;i++)
     {
