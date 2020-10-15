@@ -1,0 +1,14 @@
+In[22]:= dat=Import[NotebookDirectory[]<>"toplot.dat"];
+In[27]:= incs=Differences[dat[[;;,1]]];
+In[28]:= Show[
+Histogram[incs,Automatic,"PDF"],
+Plot[PDF[NormalDistribution[],x],{x,-3,3}]
+]
+Out[28]= 
+In[29]:= CorrelationFunction[incs,{20}][[2;;]]//BarChart
+Out[29]= 
+In[41]:= Covariance[Transpose[{Differences[dat[[;;,1]]],dat[[;;-2,2]]}]]//MatrixForm
+Out[41]//MatrixForm= (0.990902	0.0745502
+0.0745502	9.27378
+
+)

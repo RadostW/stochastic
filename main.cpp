@@ -61,9 +61,10 @@ int main()
     auto res4 = proc.SampleMilstein(x0, tmax, dt);
     auto res5 = proc.SampleMilstein(x0, tmax, dt);
 
-    for (int i = 0; i < res1.size(); i++)
+    for(int i=0;i<100;i++)
     {
-        fprintf(out, "%lf %lf %lf %lf %lf\n", res1[i], res2[i], res3[i], res4[i], res5[i]);
+        fprintf(out,"%lf\n",proc.WeinerValue(i));
     }
-    cout << "Done" << endl;*/
+
+    fclose(out);*/
 }
