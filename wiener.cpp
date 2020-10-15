@@ -130,24 +130,3 @@ private:
         y = sqrt(yy) * y;
     }
 };
-
-int main()
-{
-    Wiener w;
-    FILE *out;
-    out = fopen("toplot.dat", "w");
-
-    for(int i=0;i<10;i++)
-    {
-        double x = rand()%1000;
-        double tmp = w.getValue(x);
-        printf("%d: %lf %lf\n",i,x,tmp);
-    }
-
-    for(double i=1;i<2000;i++)
-    {
-        fprintf(out,"%lf %lf\n",w.getValue(i),w.getZ(i-1,i));
-    }
-
-    fclose(out);
-}

@@ -1,0 +1,1 @@
+Testing wiener: `g++ wiener_test.cpp -o wiener_test && ./wiener_test`

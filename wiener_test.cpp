@@ -1,5 +1,5 @@
 #include "wiener.cpp"
-#include<iostream>
+#include <iostream>
 
 /*
 Moze napiszesz automatycznego unit testa tego wienera?
@@ -10,38 +10,64 @@ I potem to samo dla Z
 i w końcu czy Z na przedziałach ma dobrą korelacje z W (i tutaj przedziały minimalnej wielkości najpierw a potem na przykład wielkości 5)
 */
 
-int main()
+
+bool testWiener(Wiener w, double T, double dt)
 {
-    Wiener w;
-    int n = 100;
-    int N = 1000;
-    
-    //sample at random points
-    for(int i=0;i<n;i++) w.getValue( rand()%N + (rand()%100)/100. );
-    
+    int N = T/dt;
+
     //obtain values
     double increments[N];
     double z_values[N];
-    for(int i=0;i<N+1;i++) 
+    for (int i = 0; i < N + 1; i++)
     {
-        increments[i] = w.getValue(i+1)-w.getValue(i);
-        z_values[i] = w.getZ(i, i+1);
+        increments[i] = w.getValue(dt*(i+1)) - w.getValue(dt*i);
+        z_values[i] = w.getZ(dt*i, dt*(i+1));
     }
 
-    double w_quantile = 0;
-    double z_quantile = 0;
-    double cov_wz = 0;
-    double cov_dw = 0;
-    for(int i=0;i<N;i++) 
+    double Edw_squared = 0;
+    double Ez_squared = 0;
+    double Edw_z = 0;
+    double Edw_lagdw = 0;
+    for (int i = 0; i < N; i++)
     {
-        if(increments[i]>2)  w_quantile+=1./N;
-        if(z_values[i]>2/3.) z_quantile+=1./N;
-        cov_wz += increments[i]*z_values[i]/N;
-        cov_dw += increments[i+1]*increments[i]/N;
+        Edw_squared+=increments[i]*increments[i];
+        Ez_squared+=z_values[i]*z_values[i];
+        Edw_z += increments[i] * z_values[i];
+        Edw_lagdw += increments[i + 1] * increments[i];
     }
-    int x;
-    x++;
+    Edw_squared /= N;
+    Ez_squared /= N;
+    Edw_z /= N;
+    Edw_lagdw /= N;
 
-    
+    if (
+        abs(Edw_squared - dt)/dt                  > 0.01 ||
+        abs(Edw_z - dt*dt/2)/(dt*dt/2)            > 0.01 ||
+        abs(Ez_squared - dt*dt*dt/3)/(dt*dt*dt/3) > 0.01 ||
+        abs(Edw_lagdw)                            > 0.01)
+    {
+        std::cout << "dt=" << dt << std::endl 
+            << "Edw_squared=" << Edw_squared << ",\tshould be " << dt << std::endl
+            << "Edw_z=" << Edw_z << ",\t\tshould be " << dt*dt/2 << std::endl
+            << "Ez_squared=" << Ez_squared << ",\tshould be " << dt*dt*dt/3 << std::endl
+            << "Edw_lagdw=" << Edw_lagdw << ",\tshould be " << 0 << std::endl;
+        return false;
+    }
+    else return true;
+}
+
+int main()
+{
+    Wiener w;
+    int n = 1000;
+    int T = 100000;
+
+    //sample at n random points
+    for (int i = 0; i < n; i++)
+        w.getValue((rand() % 100*T)/100.);
+
+    if( !(testWiener(w, T, 1) && testWiener(w, T, 5)) )
+        throw logic_error("test failed");
+
     return 0;
 }
