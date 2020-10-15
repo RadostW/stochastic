@@ -66,7 +66,9 @@ int main()
     for (int i = 0; i < n; i++)
         w.getValue((rand() % 100*T)/100.);
 
-    if( !(testWiener(w, T, 1) && testWiener(w, T, 5)) )
+    bool test1 = testWiener(w, T, 1);
+    bool test5 = testWiener(w, T, 5); 
+    if( !(test1 && test5) )
         throw logic_error("test failed");
 
     return 0;
