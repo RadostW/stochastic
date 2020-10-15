@@ -28,29 +28,34 @@ bool testWiener(Wiener w, double T, double dt)
     double Ez_squared = 0;
     double Edw_z = 0;
     double Edw_lagdw = 0;
+    double Ez_lagz = 0;
     for (int i = 0; i < N; i++)
     {
         Edw_squared+=increments[i]*increments[i];
         Ez_squared+=z_values[i]*z_values[i];
         Edw_z += increments[i] * z_values[i];
         Edw_lagdw += increments[i + 1] * increments[i];
+        Ez_lagz += z_values[i + 1] * z_values[i];
     }
     Edw_squared /= N;
     Ez_squared /= N;
     Edw_z /= N;
     Edw_lagdw /= N;
+    Ez_lagz /= N;
 
     if (
         abs(Edw_squared - dt)/dt                  > 0.01 ||
         abs(Edw_z - dt*dt/2)/(dt*dt/2)            > 0.01 ||
         abs(Ez_squared - dt*dt*dt/3)/(dt*dt*dt/3) > 0.01 ||
-        abs(Edw_lagdw)                            > 0.01)
+        abs(Edw_lagdw)                            > 0.01 ||
+        abs(Ez_lagz)                              > 0.01)
     {
         std::cout << "dt=" << dt << std::endl 
             << "Edw_squared=" << Edw_squared << ",\tshould be " << dt << std::endl
             << "Edw_z=" << Edw_z << ",\t\tshould be " << dt*dt/2 << std::endl
             << "Ez_squared=" << Ez_squared << ",\tshould be " << dt*dt*dt/3 << std::endl
-            << "Edw_lagdw=" << Edw_lagdw << ",\tshould be " << 0 << std::endl;
+            << "Edw_lagdw=" << Edw_lagdw << ",\tshould be " << 0 << std::endl
+            << "Ez_lagz=" << Ez_lagz << ",\tshould be " << 0 << std::endl;
         return false;
     }
     else return true;
