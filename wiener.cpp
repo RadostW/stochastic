@@ -65,14 +65,14 @@ private:
     }
     void drawIndependentWZ(double t1, double t2, double wt1, double &wt2, double &zt1t2)
     {
-        // W(t2), Z(t1, t2) | W(t1); t1<t2
+        // assigns to wt2, zt1t2 sample from W(t2), Z(t1, t2) | W(t1); t1<t2
         double dt = t2 - t1;
         DrawCovaried(dt, dt*dt/2, dt*dt*dt/3, wt2, zt1t2);
         wt2 += wt1;
     }
     void drawDependentWZ(double t1, double t2, double t3, double wt1, double wt3, double zt1t3, double &wt2, double &zt1t2) 
     {
-        // W(t2), Z(t1, t2) | W(t1), W(t3), Z(t1, t3); t1<t2<t3
+        // assigns to wt2, zt1t2 sample from W(t2), Z(t1, t2) | W(t1), W(t3), Z(t1, t3); t1<t2<t3
         double i1 = t2-t1;
         double i2 = t3-t2;
         double I = t3-t1;
@@ -118,7 +118,7 @@ private:
     }
 };
 
-int main()
+/*int main()
 {
     Wiener w;
     FILE *out;
@@ -137,4 +137,4 @@ int main()
     }
 
     fclose(out);
-}
+}*/
