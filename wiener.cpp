@@ -28,7 +28,7 @@ public:
         ensureSamplePoint(t2);
 
         auto lower = samplePoints.lower_bound(t1);
-        auto upper = samplePoints.upper_bound(t2);
+        auto upper = samplePoints.lower_bound(t2);
         auto it = samplePoints.begin();
         
             
