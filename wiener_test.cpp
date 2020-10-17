@@ -43,21 +43,19 @@ bool testWiener(Wiener w, double T, double dt)
     Edw_lagdw /= N;
     Ez_lagz /= N;
 
+    std::cout << "dt=" << dt << std::endl 
+        << "Edw_squared=" << Edw_squared << ",\tshould be " << dt << std::endl
+        << "Edw_z=" << Edw_z << ",\t\tshould be " << dt*dt/2 << std::endl
+        << "Ez_squared=" << Ez_squared << ",\tshould be " << dt*dt*dt/3 << std::endl
+        << "Edw_lagdw=" << Edw_lagdw << ",\tshould be " << 0 << std::endl
+        << "Ez_lagz=" << Ez_lagz << ",\tshould be " << 0 << std::endl;
+
     if (
         abs(Edw_squared - dt)/dt                  > 0.01 ||
         abs(Edw_z - dt*dt/2)/(dt*dt/2)            > 0.01 ||
         abs(Ez_squared - dt*dt*dt/3)/(dt*dt*dt/3) > 0.01 ||
         abs(Edw_lagdw)                            > 0.01 ||
-        abs(Ez_lagz)                              > 0.01)
-    {
-        std::cout << "dt=" << dt << std::endl 
-            << "Edw_squared=" << Edw_squared << ",\tshould be " << dt << std::endl
-            << "Edw_z=" << Edw_z << ",\t\tshould be " << dt*dt/2 << std::endl
-            << "Ez_squared=" << Ez_squared << ",\tshould be " << dt*dt*dt/3 << std::endl
-            << "Edw_lagdw=" << Edw_lagdw << ",\tshould be " << 0 << std::endl
-            << "Ez_lagz=" << Ez_lagz << ",\tshould be " << 0 << std::endl;
-        return false;
-    }
+        abs(Ez_lagz)                              > 0.01) return false;
     else return true;
 }
 
@@ -71,8 +69,11 @@ int main()
     for (int i = 0; i < n; i++)
         w.getValue((rand() % 100*T)/100.);
 
+    for (int i = 0; i < T; i++)
+        w.getValue(i);
+
     bool test1 = testWiener(w, T, 1);
-    bool test5 = testWiener(w, T, 5); 
+    bool test5 = testWiener(w, T, 3); 
     if( !(test1 && test5) )
         throw logic_error("test failed");
 
