@@ -27,23 +27,18 @@ public:
         ensureSamplePoint(t1);
         ensureSamplePoint(t2);
 
-        auto lower = samplePoints.lower_bound(t1);
-        auto upper = samplePoints.lower_bound(t2);
-        auto it = samplePoints.begin();
-        
-            
-        double accumulator = 0;
-        double tm = t2;
-        double ta, tb;
-        for(it = lower;lower!=upper;lower++)
+        auto it = samplePoints.lower_bound(t1);
+        double Z = 0;
+        double Wt1 = it->second.w, dW, t, dt;
+        while(it->first != t2)
         {
-            ta = it->first;
-            tb = next(it)->first;
-            accumulator += next(it)->second.zToPrevPoint;
-            accumulator += (getValue(tb)-getValue(ta))*(tm - ta);
+            t = it->first;
+            dW = it->second.w - Wt1;
+            it++;
+            dt = it->first - t;
+            Z += it->second.zToPrevPoint + dt*dW;
         }
-        return accumulator;
-
+        return Z;
     }
 
 private:
