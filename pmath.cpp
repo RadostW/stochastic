@@ -1,4 +1,10 @@
+// Copyright 2020, Radost Waszkiewicz and Maciej Bartczak
+// This project is licensed under the terms of the MIT license.
+#pragma once
 #include<cmath>
+
+// This file is dedicated to defining function literals.
+// These functions help define taylor expansion relations for cmath functions
 
 double nsin(double x)
 {

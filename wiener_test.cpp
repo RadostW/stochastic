@@ -59,11 +59,14 @@ bool testWiener(Wiener w, double T, double dt)
     else return true;
 }
 
+#include<ctime>
 int main()
 {
     Wiener w;
     int n = 1000;
     int T = 100000;
+
+    srand(time(0));
 
     //sample at n random points
     for (int i = 0; i < n; i++)
