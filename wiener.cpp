@@ -29,8 +29,8 @@ class Wiener
     // See "Numerical Solution of Stochastic Differential Equations" for reference
     double GetZ(double t1, double t2)
     {
-        ensureSamplePoint(t1);
-        ensureSamplePoint(t2);
+        EnsureSamplePoint(t1);
+        EnsureSamplePoint(t2);
 
         auto it = samplePoints.lower_bound(t1);
         double Z = 0, Wt1 = it->second.w, dW, t, dt;
