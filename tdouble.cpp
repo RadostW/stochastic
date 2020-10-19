@@ -1,34 +1,40 @@
+// Copyright 2020, Radost Waszkiewicz and Maciej Bartczak
+// This project is licensed under the terms of the MIT license.
+#pragma once
 #include<array>
+#include"pmath.cpp"
 
-using namespace std;
-#define maxvars 10
-
-class tdouble //double with taylor expansion
+// Stores a value together with a Taylor expansion.
+// Supports all arithmetic operations of double.
+// Supports many functions of <cmath>.
+class tdouble
 {
-    private:
+ private:
+    // TODO(2020 October 19) make maxvars a variable rather than a const
+    static const int maxvars = 10;
     double x;
-    array<double,maxvars> gr;
-    array< array<double, maxvars>, maxvars> hes;
-    tdouble(double nx,array<double,maxvars> ngr, array<array<double, maxvars>,maxvars> nhes)
+    std::array<double, maxvars> gr;
+    std::array< std::array<double, maxvars>, maxvars> hes;
+    tdouble(double nx, std::array<double, maxvars> ngr, std::array<std::array<double, maxvars>, maxvars> nhes)
     {
         x = nx;
         gr = ngr;
         hes = nhes;
     }
-    public:
-    const array<double,maxvars> get_gradient()
+ public:
+    const std::array<double, maxvars> GetGradient()
     {
         return gr;
     }
-    const array< array<double,maxvars>, maxvars> get_hessian()
+    const std::array< std::array<double, maxvars>, maxvars> GetHessian()
     {
         return hes;
     }
-    const double get_value()
+    const double GetValue()
     {
         return x;
     }
-    tdouble(double val,int id) //create a new variable
+    tdouble(double val, int id)
     {
         if(id > maxvars) throw 0xBAD;
         x = val;
@@ -36,71 +42,75 @@ class tdouble //double with taylor expansion
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)hes[i][j]=0;
         gr[id]=1;
     }
-    tdouble apply(double fun(double),double der(double),double dder(double))
+
+    // Provides interface for creating tdouble functions out of double(double) functions
+    // Applies transformation given by fun, when provided with derivative and second derivative
+    tdouble Apply(double fun(double), double der(double), double dder(double))
     {
         double nx = fun(x);
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         
         for(int i=0;i<maxvars;i++)ngr[i] = gr[i]*der(x);
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = hes[i][j]*der(x) + gr[i]*gr[j]*dder(x);
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
-    tdouble inverse() const
+
+    // Inbuild 1/x function
+    // Helps with implementations of arithmetic operators
+    tdouble Inverse() const
     {
         double nx = 1/x;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         
         for(int i=0;i<maxvars;i++)ngr[i] = -gr[i]*(1/x)*(1/x);
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = -hes[i][j]*(1/x)*(1/x) + gr[i]*gr[j]*(2/(x*x*x));
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
     
-    
-    
     //ARITHMETIC OPERATORS
-    //addition with type
+    // Addition with type.
     tdouble operator+(const tdouble& rhs) const
     {
         double nx = this->x + rhs.x;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = (rhs.gr)[i] + (this->gr)[i];
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs.hes[i][j] + (this->hes)[i][j];
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
-    //addition with scalar
+    // Addition with scalar.
     tdouble operator+(const double rhs) const
     {
         double nx = this->x + rhs;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = (this->gr)[i];
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=(this->hes)[i][j];
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
-    //multiplicaiton with scalar
+    // Multiplicaiton with scalar.
     tdouble operator*(const double& rhs) const
     {
         double nx = x * rhs;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = rhs*(this->gr)[i];
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs*(this->hes)[i][j];
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
-    //multiplication with type
+    // Multiplication with type.
     tdouble operator*(const tdouble& rhs) const
     {
         double nx = this->x * rhs.x;
-        array<double,maxvars> ngr;
-        array< array<double, maxvars>, maxvars> nhes;
+        std::array<double, maxvars> ngr;
+        std::array< std::array<double, maxvars>, maxvars> nhes;
         for(int i=0;i<maxvars;i++)ngr[i] = x*(rhs.gr)[i] + rhs.x * (this->gr)[i];
         auto x1 = this->x;
         auto x2 = rhs.x;
@@ -110,20 +120,20 @@ class tdouble //double with taylor expansion
         auto g2 = rhs.gr;
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j] = g1[i]*g2[j]+g2[i]*g1[j]+x1*hes2[i][j]+x2*hes1[i][j];
         
-        return tdouble(nx,ngr,nhes);
+        return tdouble(nx, ngr, nhes);
     }
-    //division by type
+    // Division by type.
     tdouble operator/(const tdouble&rhs) const
     {
-        return (*this)*rhs.inverse();
+        return (*this)*rhs.Inverse();
     }
-    //division by scalar
+    // Division by scalar.
     tdouble operator/(const double rhs) const
     {
         return (*this)*(1/rhs);
     }
 
-    //comparison operators tdouble
+    // Comparison operators tdouble.
     bool operator< (const tdouble &y) const {
         return x < y.x;
     }
@@ -143,7 +153,7 @@ class tdouble //double with taylor expansion
         return x != y.x;
     }
     
-    //comparison operators with double
+    // Comparison operators with double.
     bool operator< (double y) const {
         return x < y;
     }
@@ -163,11 +173,9 @@ class tdouble //double with taylor expansion
         return x != y;
     }
     
-    
-    //printer
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
     {
-        string text;
+        std::string text;
         text += std::to_string(q.x);
         for(int i=0;i<maxvars;i++)
         {
@@ -194,7 +202,7 @@ class tdouble //double with taylor expansion
     }
 };
 
-//comparison operators with double
+// Comparison operators with double.
 bool operator< (double x, const tdouble &y){
     return y > x;
 }
@@ -219,16 +227,16 @@ tdouble operator-(const tdouble &q){
     return q*(-1.);
 }
 
-tdouble operator+(double lhs,const tdouble& rhs)
+tdouble operator+(double lhs, const tdouble& rhs)
 {
     return rhs+lhs;
 } 
 
-tdouble operator-(const tdouble& lhs,const tdouble& rhs)
+tdouble operator-(const tdouble& lhs, const tdouble& rhs)
 {
     return lhs+rhs*(-1);
 }
-tdouble operator-(double lhs,const tdouble& rhs)
+tdouble operator-(double lhs, const tdouble& rhs)
 {
     return lhs+rhs*(-1);
 }
@@ -237,36 +245,38 @@ tdouble operator-(const tdouble&lhs, double rhs)
     return lhs+(-rhs);
 }
 
-tdouble operator*(double lhs,const tdouble& rhs)
+tdouble operator*(double lhs, const tdouble& rhs)
 {
     return (rhs*lhs);
 }
-tdouble operator/(double lhs,const tdouble& rhs)
+tdouble operator/(double lhs, const tdouble& rhs)
 {
-    return lhs*(rhs.inverse());
+    return lhs*(rhs.Inverse());
 }
 
+
+// Common functions
 tdouble cos(tdouble x)
 {
-    return x.apply(cos,nsin,ncos);
+    return x.Apply(cos, nsin, ncos);
 }
 tdouble sin(tdouble x)
 {
-    return x.apply(sin,cos,nsin);
+    return x.Apply(sin, cos, nsin);
 }
 tdouble tan(tdouble x)
 {
-    return x.apply(tan,sec2,tanpp);
+    return x.Apply(tan, sec2, tanpp);
 }
 tdouble exp(tdouble x)
 {
-    return x.apply(exp,exp,exp);
+    return x.Apply(exp, exp, exp);
 }
 tdouble log(tdouble x)
 {
-    return x.apply(log,logp,logpp);
+    return x.Apply(log, logp, logpp);
 }
 tdouble sqrt(tdouble x)
 {
-    return x.apply(sqrt,sqrtp,sqrtpp);
+    return x.Apply(sqrt, sqrtp, sqrtpp);
 }
