@@ -1,7 +1,8 @@
+// Copyright 2020, Radost Waszkiewicz and Maciej Bartczak
+// This project is licensed under the terms of the MIT license.
+
 #include <vector>
 #include <stdio.h>
-#include "pmath.cpp"
-#include "tdouble.cpp"
 #include "itoprocess.cpp"
 
 const double ceiling = 50.;
@@ -30,7 +31,7 @@ tdouble dmobility(tdouble location)
 
 tdouble a_term(tdouble x)
 {
-    return dmobility(x);
+    return dmobility(x) - 1;
 }
 tdouble b_term(tdouble x)
 {
@@ -47,24 +48,20 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    proc.WeinerValue(3.);
-    proc.WeinerValue(1.);
-    proc.WeinerValue(2.);
-    int x;
-    /*double x0 = 10;
+    double x0 = 3;
     double tmax = 100;
-    double dt = 1;
+    double dt = 0.01;
     auto res1 = proc.SampleWagnerPlaten(x0, tmax, dt);
     auto res2 = proc.SampleMilstein(x0, tmax, dt);
     auto res3 = proc.SampleMilstein(x0, tmax, dt);
-    proc.WeinerResample();
+    proc.ResetRealization();
     auto res4 = proc.SampleMilstein(x0, tmax, dt);
     auto res5 = proc.SampleMilstein(x0, tmax, dt);
 
-    for(int i=0;i<100;i++)
+    for(int i=0;i<res1.size()-10;i++)
     {
-        fprintf(out,"%lf\n",proc.WeinerValue(i));
+        fprintf(out,"%lf %lf %lf %lf %lf\n",res1[i],res2[i],res3[i],res4[i],res5[i]);
     }
 
-    fclose(out);*/
+    fclose(out);
 }

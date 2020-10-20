@@ -4,7 +4,6 @@
 #include<map>
 #include<random>
 
-
 // Provides abstraction a realization of Wiener process,
 // See https://en.wikipedia.org/wiki/Wiener_process for details.
 // Allows for persistent, consistent sampling and subsampling
@@ -16,6 +15,12 @@ class Wiener
     {
         samplePoints[0.].w = 0;
         samplePoints[0.].zToPrevPoint = 0;
+    }
+    Wiener(int seed_value)
+    {
+        samplePoints[0.].w = 0;
+        samplePoints[0.].zToPrevPoint = 0;
+        generator.seed(seed_value);
     }
 
     // Returns Wiener value at time t
