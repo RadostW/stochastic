@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "itoprocess.cpp"
 
+/*
 const double ceiling = 50.;
 tdouble mobility(tdouble location)
 {
@@ -28,14 +29,26 @@ tdouble dmobility(tdouble location)
                      (h * h * h);
     return location > (0.5 * ceiling) ? dmobup : dmobdown;
 }
+*/
 
+tdouble mobility(tdouble x)
+{
+    return 1.0-1.0/x;
+}
+tdouble dmobility(tdouble x)
+{
+    return 1.0/(x*x);
+}
+
+double kbT = 1;
+double g = 1;
 tdouble a_term(tdouble x)
 {
-    return dmobility(x) - 1;
+    return  kbT * dmobility(x) - mobility(x)*g;
 }
 tdouble b_term(tdouble x)
 {
-    return sqrt(2 * mobility(x));
+    return sqrt(2 * kbT * mobility(x));
 }
 // stochastic equation to be solved:
 // dX = a_term(x) dt + b_term(x) dW
@@ -48,19 +61,25 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    double x0 = 3;
-    double tmax = 100;
-    double dt = 0.01;
-    auto res1 = proc.SampleWagnerPlaten(x0, tmax, dt);
-    auto res2 = proc.SampleMilstein(x0, tmax, dt);
-    auto res3 = proc.SampleMilstein(x0, tmax, dt);
-    proc.ResetRealization();
-    auto res4 = proc.SampleMilstein(x0, tmax, dt);
-    auto res5 = proc.SampleMilstein(x0, tmax, dt);
+    const int nproc = 20;
+    double x0 = 2;
+    double tmax = 1000;
+    double dt = 0.02;
 
-    for(int i=0;i<res1.size()-10;i++)
+    std::vector<double> res[nproc];
+    for(int i=0;i<nproc;i++)
     {
-        fprintf(out,"%lf %lf %lf %lf %lf\n",res1[i],res2[i],res3[i],res4[i],res5[i]);
+        res[i] = proc.SampleWagnerPlaten(x0, tmax, dt);
+        proc.ResetRealization();
+    }
+
+    for(int i=0;i*dt<tmax;i++)
+    {
+        for(int j=0;j<nproc;j++)
+        {
+            fprintf(out,"%lf ",res[j][i]);
+        }
+        fprintf(out,"\n");
     }
 
     fclose(out);
