@@ -11,7 +11,7 @@ class tdouble
 {
  private:
     // TODO(2020 October 19) make maxvars a variable rather than a const
-    static const int maxvars = 10;
+    static const int maxvars = 2;
     double x;
     std::array<double, maxvars> gr;
     std::array< std::array<double, maxvars>, maxvars> hes;
@@ -279,4 +279,12 @@ tdouble log(tdouble x)
 tdouble sqrt(tdouble x)
 {
     return x.Apply(sqrt, sqrtp, sqrtpp);
+}
+tdouble sech(tdouble x)
+{
+    return x.Apply(sech,sechp,sechpp);
+}
+tdouble tanh(tdouble x)
+{
+    return x.Apply(tanh,tanhp,tanpp);
 }
