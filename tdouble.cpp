@@ -11,7 +11,7 @@ class tdouble
 {
  private:
     // TODO(2020 October 19) make maxvars a variable rather than a const
-    static const int maxvars = 10;
+    static const int maxvars = 2;
     double x;
     std::array<double, maxvars> gr;
     std::array< std::array<double, maxvars>, maxvars> hes;

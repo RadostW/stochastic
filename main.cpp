@@ -86,15 +86,15 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    const int nproc = 20000;
+    const int nproc = 1000;
     double x0 = 0;
     double tmax = 400;
-    double dt = 10;
+    double dt = 1;
 
     std::vector<double> res[nproc];
     for(int i=0;i<nproc;i++)
     {
-        res[i] = proc.SampleEuler(x0, tmax, dt);
+        res[i] = proc.SampleWagnerPlaten(x0, tmax, dt);
         proc.ResetRealization();
     }
 
