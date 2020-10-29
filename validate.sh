@@ -4,6 +4,8 @@ g++ validate.cpp -o validate
 python3 - << EOF
 import pandas as pd
 import matplotlib.pyplot as plt
-pd.read_table('toplot.dat', sep=' ').interpolate().drop('t', axis=1).plot(); plt.savefig('foo.png')
-plt.close()
+import numpy as np
+np.log(1e-3+pd.read_table('toplot.dat', sep=' ').set_index('steps')).plot()
+#plt.xlabel('steps')
+plt.savefig('foo.png')
 EOF
