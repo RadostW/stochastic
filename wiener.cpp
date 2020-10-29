@@ -20,7 +20,7 @@ class Wiener
     {
         samplePoints[0.].w = 0;
         samplePoints[0.].zToPrevPoint = 0;
-        generator.seed(seed_value);
+        generator.seed(seed_value+generator());
     }
 
     // Returns Wiener value at time t

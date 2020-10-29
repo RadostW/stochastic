@@ -25,12 +25,16 @@ class ItoProcess
         fb = volitality;
         W = Wiener();
     }
-    
+
     // Destroys underlying process and creates a new one.
     // If you want another sample from the same process use this.
     void ResetRealization()
     {
-        W = Wiener(time(0));
+        //TODO: this is ugly now, RW 2020-10-28
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+
+        W = Wiener(ts.tv_nsec);
     }
 
     std::vector<double> SampleEuler(double x0, double tmax, double dt)
