@@ -98,7 +98,7 @@ int main()
         proc.ResetRealization();
     }
 
-    for(int i=0;i*dt<tmax;i++)
+    for(int i=tmax/dt - 100;i*dt<tmax;i++)
     {
         for(int j=0;j<nproc;j++)
         {
