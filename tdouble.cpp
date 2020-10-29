@@ -280,3 +280,11 @@ tdouble sqrt(tdouble x)
 {
     return x.Apply(sqrt, sqrtp, sqrtpp);
 }
+tdouble sech(tdouble x)
+{
+    return x.Apply(sech,sechp,sechpp);
+}
+tdouble tanh(tdouble x)
+{
+    return x.Apply(tanh,tanhp,tanpp);
+}

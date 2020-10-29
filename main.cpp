@@ -31,6 +31,7 @@ tdouble dmobility(tdouble location)
 }
 */
 
+/*
 tdouble mobility(tdouble x)
 {
     return 1.0-1.0/x;
@@ -50,6 +51,30 @@ tdouble b_term(tdouble x)
 {
     return sqrt(2 * kbT * mobility(x));
 }
+*/
+
+double a=0.1;
+tdouble a_term(tdouble x)
+{
+    if(x > 3)
+    {
+        return -0.5*a*a*exp(-x+2/3)*sech(x);
+    }
+    else if(x < -3)
+    {
+        return 0.5*a*a*exp(x+2/3)*sech(x);
+    }
+    else
+    {
+        return -0.5*a*a*tanh(x)*sech(x)*sech(x);
+    }
+}
+tdouble b_term(tdouble x)
+{
+    return a*sech(x);
+}
+
+
 // stochastic equation to be solved:
 // dX = a_term(x) dt + b_term(x) dW
 
@@ -61,19 +86,19 @@ int main()
 
     ItoProcess proc = ItoProcess(a_term, b_term);
 
-    const int nproc = 20;
-    double x0 = 2;
-    double tmax = 1000;
-    double dt = 0.02;
+    const int nproc = 20000;
+    double x0 = 0;
+    double tmax = 400;
+    double dt = 10;
 
     std::vector<double> res[nproc];
     for(int i=0;i<nproc;i++)
     {
-        res[i] = proc.SampleWagnerPlaten(x0, tmax, dt);
+        res[i] = proc.SampleEuler(x0, tmax, dt);
         proc.ResetRealization();
     }
 
-    for(int i=0;i*dt<tmax;i++)
+    for(int i=tmax/dt - 100;i*dt<tmax;i++)
     {
         for(int j=0;j<nproc;j++)
         {
