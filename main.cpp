@@ -88,13 +88,13 @@ int main()
 
     const int nproc = 1000;
     double x0 = 0;
-    double tmax = 200;
+    double tmax = 400;
     double dt = 1;
 
     std::vector<double> res[nproc];
     for(int i=0;i<nproc;i++)
     {
-        res[i] = proc.SampleMilstein(x0, tmax, dt);
+        res[i] = proc.SampleWagnerPlaten(x0, tmax, dt);
         proc.ResetRealization();
     }
 
