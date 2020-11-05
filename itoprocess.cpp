@@ -37,53 +37,62 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
-    std::vector<double> SampleEuler(double x0, double tmax, double dt)
+    std::vector<double> SampleEuler(double x0, double tmax, double step)
     {
         double t = 0;
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; dt * i < tmax; i++)
+        for (int i = 0; step * i < tmax; i++)
         {
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i;
+            double send = std::min(step*(i+1),tmax);
+            double dt = send-sbegin;
             double a = fa(x).GetValue();
             double b = fb(x).GetValue();
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
             x = tdouble(x.GetValue() + a * dt + b * dW, 0);
         }
         res.push_back(x.GetValue()); //Push final value
         return res;
     }
 
-    std::vector<double> SampleMilstein(double x0, double tmax, double dt)
+    std::vector<double> SampleMilstein(double x0, double tmax, double step)
     {
         double t = 0;
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; dt * i < tmax; i++)
+        for (int i = 0; step * i < tmax; i++)
         {
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i;
+            double send = std::min(step*(i+1),tmax);
+            double dt = send-sbegin;            
             double a = fa(x).GetValue();
             tdouble fbval = fb(x);
             double b = fbval.GetValue();
             double bp = fbval.GetGradient()[0];
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
             x = tdouble(x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt), 0);
         }
         res.push_back(x.GetValue()); //Push final value
         return res;
     }
 
-    std::vector<double> SampleWagnerPlaten(double x0, double tmax, double dt)
+    std::vector<double> SampleWagnerPlaten(double x0, double tmax, double step)
     {
         double t = 0;
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; dt * i < tmax; i++)
+        for (int i = 0; step * i < tmax; i++)
         {
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i;
+            double send = std::min(step*(i+1),tmax);
+            double dt = send-sbegin;
             tdouble faval = fa(x);
             double a = faval.GetValue();
             double ap = faval.GetGradient()[0];
@@ -94,8 +103,8 @@ class ItoProcess
             double bp = fbval.GetGradient()[0];
             double bpp = fbval.GetHessian()[0][0];
 
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
-            double dZ = W.GetZ(i*dt,(i+1)*dt);
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            double dZ = W.GetZ(sbegin,send);
 
             x = tdouble(
                 x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt) +

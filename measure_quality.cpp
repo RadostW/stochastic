@@ -39,8 +39,8 @@ int main()
 
     const int nproc = 1000;
     double x0 = 0;
-    double tmax = 1000;
-    double dt = 10;
+    double tmax = 19.09;
+    double dt = 0.1;
 
     double errWagnerPlaten=0;
     double errMilstein=0;

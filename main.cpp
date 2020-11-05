@@ -80,32 +80,13 @@ tdouble b_term(tdouble x)
 
 int main()
 {
-
-    FILE *out;
-    out = fopen("toplot.dat", "w");
-
     ItoProcess proc = ItoProcess(a_term, b_term);
 
     const int nproc = 1000;
     double x0 = 0;
     double tmax = 100;
-    double dt = 50;
+    double dt = 30;
 
-    std::vector<double> res[nproc];
-    for(int i=0;i<nproc;i++)
-    {
-        res[i] = proc.SampleWagnerPlaten(x0, tmax, dt);
-        proc.ResetRealization();
-    }
-
-    for(int i=tmax/dt - 100;i*dt<tmax;i++)
-    {
-        for(int j=0;j<nproc;j++)
-        {
-            fprintf(out,"%lf ",res[j][i]);
-        }
-        fprintf(out,"\n");
-    }
-
-    fclose(out);
+    auto res = proc.SampleWagnerPlaten(x0, tmax, dt);
+    printf("Len = %d\n",(int)res.size());
 }
