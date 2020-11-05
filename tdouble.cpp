@@ -286,5 +286,5 @@ tdouble sech(tdouble x)
 }
 tdouble tanh(tdouble x)
 {
-    return x.Apply(tanh,tanhp,tanpp);
+    return x.Apply(tanh,tanhp,tanhpp);
 }

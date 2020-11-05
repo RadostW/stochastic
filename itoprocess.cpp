@@ -45,12 +45,13 @@ class ItoProcess
 
         for (int i = 0; dt * i < tmax; i++)
         {
-            res.push_back(x.GetValue());
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
             double a = fa(x).GetValue();
             double b = fb(x).GetValue();
             double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
             x = tdouble(x.GetValue() + a * dt + b * dW, 0);
         }
+        res.push_back(x.GetValue()); //Push final value
         return res;
     }
 
@@ -62,7 +63,7 @@ class ItoProcess
 
         for (int i = 0; dt * i < tmax; i++)
         {
-            res.push_back(x.GetValue());
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
             double a = fa(x).GetValue();
             tdouble fbval = fb(x);
             double b = fbval.GetValue();
@@ -70,6 +71,7 @@ class ItoProcess
             double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
             x = tdouble(x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt), 0);
         }
+        res.push_back(x.GetValue()); //Push final value
         return res;
     }
 
@@ -81,7 +83,7 @@ class ItoProcess
 
         for (int i = 0; dt * i < tmax; i++)
         {
-            res.push_back(x.GetValue());
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
             tdouble faval = fa(x);
             double a = faval.GetValue();
             double ap = faval.GetGradient()[0];
@@ -94,7 +96,7 @@ class ItoProcess
 
             double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
             double dZ = W.GetZ(i*dt,(i+1)*dt);
-            
+
             x = tdouble(
                 x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt) +
                     b * ap * dZ + 0.5 * (a * ap + 0.5 * b * b * app) * dt * dt +
@@ -102,7 +104,12 @@ class ItoProcess
                     0.5 * b * (b * bpp + bp * bp) * ((1. / 3.) * dW * dW - dt) * dW,
                 0);
         }
+        res.push_back(x.GetValue()); //Push final value
         return res;
+    }
+    double GetWienerValue(double time)
+    {
+        return W.GetValue(time);
     }
 
  private:

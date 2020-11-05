@@ -88,8 +88,8 @@ int main()
 
     const int nproc = 1000;
     double x0 = 0;
-    double tmax = 400;
-    double dt = 1;
+    double tmax = 100;
+    double dt = 50;
 
     std::vector<double> res[nproc];
     for(int i=0;i<nproc;i++)
