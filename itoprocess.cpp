@@ -37,6 +37,59 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
+    std::vector<double> SampleAdaptiveEuler(double x0, double tmin, double tmax, double step)
+    {
+
+        double maxerr=1/1000000000000.;
+
+        //printf("Integrating [%lf %lf] with step %lf\n",tmin,tmax,step);
+        //getchar();
+        auto Ltmp_big = SampleEuler(x0,tmin,(tmin+tmax)/2,step);
+        auto Ltmp_small = SampleEuler(x0,tmin,(tmin+tmax)/2,step/4);
+        double Lfin_big = *Ltmp_big.rbegin();
+        double Lfin_small = *Ltmp_small.rbegin();
+
+        if(fabs(Lfin_big - Lfin_small) > 0.5*maxerr*(tmax-tmin))
+        {
+            Ltmp_small = SampleAdaptiveEuler(x0,tmin,(tmin+tmax)/2,.9*step);
+        }
+
+        double xmid = *Ltmp_small.rbegin();
+
+        auto Rtmp_big = SampleEuler(xmid,(tmin+tmax)/2,tmax,step);
+        auto Rtmp_small = SampleEuler(xmid,(tmin+tmax)/2,tmax,step/4);
+        double Rfin_big = *Rtmp_big.rbegin();
+        double Rfin_small = *Rtmp_small.rbegin();
+
+        if(fabs(Lfin_big - Lfin_small) > 0.5*maxerr*(tmax-tmin))
+        {
+            Rtmp_small = SampleAdaptiveEuler(xmid,(tmin+tmax)/2,tmax,.9*step);
+        }
+
+        return concatenate(Ltmp_small,Rtmp_small);
+        
+    }
+
+    std::vector<double> SampleEuler(double x0, double tmin, double tmax, double step)
+    {
+        tdouble x = tdouble(x0, 0);
+        std::vector<double> res;
+
+        for (int i = 0; step * i + tmin < tmax; i++)
+        {
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i+tmin;
+            double send = std::min(step*(i+1)+tmin,tmax);
+            double dt = send-sbegin;
+            double a = fa(x).GetValue();
+            double b = fb(x).GetValue();
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            x = tdouble(x.GetValue() + a * dt + b * dW, 0);
+        }
+        res.push_back(x.GetValue()); //Push final value
+        return res;
+    }
+
     std::vector<double> SampleEuler(double x0, double tmax, double step)
     {
         double t = 0;
@@ -129,5 +182,15 @@ class ItoProcess
 
     // Underlying random process.
     Wiener W;
+
+    template<typename T>
+    std::vector<T> concatenate(std::vector<T> A, std::vector<T> B)
+    {
+        std::vector<T> AB;
+        AB.reserve( A.size() + B.size() ); // preallocate memory
+        AB.insert( AB.end(), A.begin(), A.end() );
+        AB.insert( AB.end(), next(B.begin()), B.end() );
+        return AB;
+    }
 };
 
