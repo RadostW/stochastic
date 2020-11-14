@@ -37,39 +37,40 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
-    std::vector<double> SampleAdaptiveEuler(double x0, double tmin, double tmax, double step)
+    std::vector<double> SampleAdaptiveMilstein(double x0, double tmin, double tmax, double step)
     {
 
-        double maxerr=1/1000000000000.;
+        tdouble x = tdouble(x0, 0);
+        std::vector<double> res;
 
-        //printf("Integrating [%lf %lf] with step %lf\n",tmin,tmax,step);
-        //getchar();
-        auto Ltmp_big = SampleEuler(x0,tmin,(tmin+tmax)/2,step);
-        auto Ltmp_small = SampleEuler(x0,tmin,(tmin+tmax)/2,step/4);
-        double Lfin_big = *Ltmp_big.rbegin();
-        double Lfin_small = *Ltmp_small.rbegin();
+        double t=0;
 
-        if(fabs(Lfin_big - Lfin_small) > 0.5*maxerr*(tmax-tmin))
+        for (int i = 0; t < tmax; i++)
         {
-            Ltmp_small = SampleAdaptiveEuler(x0,tmin,(tmin+tmax)/2,.9*step);
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = t;
+            double x0 = x.GetValue();
+            double stepscaling = std::min(    fabs( (1.*pow(cosh(x0),5.))/(-2. + cosh(2.*x0))  )    , 4.);
+            double send = std::min( sbegin + step * stepscaling  , tmax );
+            double dt = send-sbegin;            
+            double a = fa(x).GetValue();
+            tdouble fbval = fb(x);
+            double b = fbval.GetValue();
+            double bp = fbval.GetGradient()[0];
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            x = tdouble(x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt), 0);
+
+            t = send;
         }
-
-        double xmid = *Ltmp_small.rbegin();
-
-        auto Rtmp_big = SampleEuler(xmid,(tmin+tmax)/2,tmax,step);
-        auto Rtmp_small = SampleEuler(xmid,(tmin+tmax)/2,tmax,step/4);
-        double Rfin_big = *Rtmp_big.rbegin();
-        double Rfin_small = *Rtmp_small.rbegin();
-
-        if(fabs(Lfin_big - Lfin_small) > 0.5*maxerr*(tmax-tmin))
-        {
-            Rtmp_small = SampleAdaptiveEuler(xmid,(tmin+tmax)/2,tmax,.9*step);
-        }
-
-        return concatenate(Ltmp_small,Rtmp_small);
+        res.push_back(x.GetValue()); //Push final value
+        return res;
         
     }
 
+    std::vector<double> SampleEuler(double x0, double tmax, double step)
+    {
+        return SampleEuler(x0,0,tmax,step);
+    }
     std::vector<double> SampleEuler(double x0, double tmin, double tmax, double step)
     {
         tdouble x = tdouble(x0, 0);
@@ -90,38 +91,20 @@ class ItoProcess
         return res;
     }
 
-    std::vector<double> SampleEuler(double x0, double tmax, double step)
-    {
-        double t = 0;
-        tdouble x = tdouble(x0, 0);
-        std::vector<double> res;
-
-        for (int i = 0; step * i < tmax; i++)
-        {
-            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
-            double sbegin = step*i;
-            double send = std::min(step*(i+1),tmax);
-            double dt = send-sbegin;
-            double a = fa(x).GetValue();
-            double b = fb(x).GetValue();
-            double dW = W.GetValue(send) - W.GetValue(sbegin);
-            x = tdouble(x.GetValue() + a * dt + b * dW, 0);
-        }
-        res.push_back(x.GetValue()); //Push final value
-        return res;
-    }
-
     std::vector<double> SampleMilstein(double x0, double tmax, double step)
     {
-        double t = 0;
+        return SampleMilstein(x0,0,tmax,step);
+    }
+    std::vector<double> SampleMilstein(double x0, double tmin, double tmax, double step)
+    {
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; step * i < tmax; i++)
+        for (int i = 0; tmin + step * i < tmax; i++)
         {
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
-            double sbegin = step*i;
-            double send = std::min(step*(i+1),tmax);
+            double sbegin = tmin + step*i;
+            double send = std::min(tmin + step*(i+1),tmax);
             double dt = send-sbegin;            
             double a = fa(x).GetValue();
             tdouble fbval = fb(x);
@@ -136,15 +119,18 @@ class ItoProcess
 
     std::vector<double> SampleWagnerPlaten(double x0, double tmax, double step)
     {
-        double t = 0;
+        return SampleWagnerPlaten(x0, 0, tmax, step);
+    }
+    std::vector<double> SampleWagnerPlaten(double x0, double tmin, double tmax, double step)
+    {
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; step * i < tmax; i++)
+        for (int i = 0; tmin + step * i < tmax; i++)
         {
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
-            double sbegin = step*i;
-            double send = std::min(step*(i+1),tmax);
+            double sbegin = tmin + step*i;
+            double send = std::min(tmin + step*(i+1),tmax);
             double dt = send-sbegin;
             tdouble faval = fa(x);
             double a = faval.GetValue();
@@ -169,6 +155,7 @@ class ItoProcess
         res.push_back(x.GetValue()); //Push final value
         return res;
     }
+
     double GetWienerValue(double time)
     {
         return W.GetValue(time);
@@ -183,6 +170,12 @@ class ItoProcess
     // Underlying random process.
     Wiener W;
 
+
+    // Handy things
+    double sech(double x)
+    {
+        return 1/cosh(x);
+    }
     template<typename T>
     std::vector<T> concatenate(std::vector<T> A, std::vector<T> B)
     {
@@ -191,6 +184,12 @@ class ItoProcess
         AB.insert( AB.end(), A.begin(), A.end() );
         AB.insert( AB.end(), next(B.begin()), B.end() );
         return AB;
+    }
+
+    template<typename T>
+    T last(std::vector<T> A)
+    {
+        return *A.rbegin();
     }
 };
 
