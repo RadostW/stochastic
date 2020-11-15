@@ -176,16 +176,7 @@ class ItoProcess
     {
         return 1/cosh(x);
     }
-    template<typename T>
-    std::vector<T> concatenate(std::vector<T> A, std::vector<T> B)
-    {
-        std::vector<T> AB;
-        AB.reserve( A.size() + B.size() ); // preallocate memory
-        AB.insert( AB.end(), A.begin(), A.end() );
-        AB.insert( AB.end(), next(B.begin()), B.end() );
-        return AB;
-    }
-
+    
     template<typename T>
     T last(std::vector<T> A)
     {
