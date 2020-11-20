@@ -22,6 +22,37 @@ class tdouble
         hes = nhes;
     }
  public:
+
+    std::string ToString()
+    {
+        auto q = *this;
+        std::string text;
+        text += std::to_string(q.x);
+        for(int i=0;i<maxvars;i++)
+        {
+            if(q.gr[i]!=0)
+            {
+                text+=q.gr[i]>0?"+":"";
+                text+=std::to_string(q.gr[i]);
+                text+="D";
+                text+=std::to_string(i);
+            }
+        }
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)
+        {
+            if(q.hes[i][j]!=0)
+            {
+                text+=q.hes[i][j]>0?"+":"";
+                text+=std::to_string(q.hes[i][j]);
+                text+="D";
+                text+=std::to_string(i);
+                text+=std::to_string(j);
+            }
+        }
+        return text;
+    }
+
+
     const std::array<double, maxvars> GetGradient()
     {
         return gr;
@@ -172,7 +203,7 @@ class tdouble
     bool operator!= (double y) const {
         return x != y;
     }
-    
+
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
     {
         std::string text;
@@ -286,5 +317,5 @@ tdouble sech(tdouble x)
 }
 tdouble tanh(tdouble x)
 {
-    return x.Apply(tanh,tanhp,tanpp);
+    return x.Apply(tanh,tanhp,tanhpp);
 }
