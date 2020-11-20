@@ -60,13 +60,13 @@ vector<datapoint> method(
     char method='e',
     bool adaptive=false,
     int err_order=0,
-    int n_steps=100,
+    int n_steps=1000,
     double target_error_density=0.1
     //local_error_variance_order=None
     )
 {
-    auto a = drift;
-    auto b = volatility;
+    auto fa = drift;
+    auto fb = volatility;
 
     tdouble x = tdouble(x0, 0);
     double t = 0;
@@ -80,7 +80,19 @@ vector<datapoint> method(
     double dz;
 
     vector<datapoint> trajectory;
-    
+
+    double a;
+    double ap;
+    double app;
+    double b;
+    double bp;
+    double bpp;
+    double coef0;
+    double coef1;
+    double coef00;
+    double coef01;
+    double coef10;
+    double coef11;
 
     while(1)
     {
@@ -94,27 +106,29 @@ vector<datapoint> method(
         if(t>=T)
             break;
 
-        tdouble ta = a(x);
-        tdouble tb = b(x);
+        tdouble ta = fa(x);
+        tdouble tb = fb(x);
 
-        double a   = ta.GetValue();
-        double ap  = ta.GetGradient()[0];
-        double app = ta.GetHessian()[0][0];
+        a   = ta.GetValue();
+        ap  = ta.GetGradient()[0];
+        app = ta.GetHessian()[0][0];
         
-        double b   = tb.GetValue();
-        double bp  = tb.GetGradient()[0];
-        double bpp = tb.GetHessian()[0][0];
+        b   = tb.GetValue();
+        bp  = tb.GetGradient()[0];
+        bpp = tb.GetHessian()[0][0];
         
-        double coef0   = a;                     // sq order = 2
-        double coef1   = b;                     // sq order = 1
-        double coef00  = a*ap + b*b*app/2.;                  // sq order = 4
-        double coef01  = b*ap;                  // sq order = 3
-        double coef10  = a*bp + b*b*bpp/2.;     // sq order = 3
-        double coef11  = b*bp;     // sq order = 2
+        coef0  = a;                     // sq order = 2
+        coef1  = b;                     // sq order = 1
+        coef00 = a*ap + b*b*app/2.;                  // sq order = 4
+        coef01 = b*ap;                  // sq order = 3
+        coef10 = a*bp + b*b*bpp/2.;     // sq order = 3
+        coef11 = b*bp;                  // sq order = 2
         // double coef110 = (b*bpp + bp*bp)*a + (b*bppp + 3*bp*bpp)*b*b/2  // sq order = 4
-        double coef111 = b*(b*bpp + bp*bp);     // sq order = 3
+        // double coef111 = b*(b*bpp + bp*bp);     // sq order = 3
 
-        if(adaptive)
+        printf("%lf %lf %lf %lf\n", x, b, bp, b*bp, coef11);
+
+        /*if(adaptive)
         {
             function<double(double)> local_error_var_estimate = [](double dt){return 0.;};
             
@@ -136,7 +150,7 @@ vector<datapoint> method(
                 [local_error_var_estimate, target_error_density](double dt){return local_error_var_estimate(dt) - target_error_density*target_error_density*dt*dt;},
                 dt_min, dt_max, dt
             );            
-        }
+        }*/
 
         dt = min(dt, T-t);
 
@@ -144,7 +158,11 @@ vector<datapoint> method(
         dw = wiener.GetValue(t+dt) - wiener.GetValue(t);
         dz = wiener.GetZ(t, t+dt);
         
-        switch (method)
+        if(method == 'e')
+            dx = coef0*dt + coef1*dw;
+        if(method == 'm')
+            dx = coef0*dt + coef1*dw + coef11*(dw*dw-t)/2;
+        /*switch (method)
         {
             case 'w':
                 dx += coef01*dz + coef10*(dw*dt-dz) + coef111*((1. / 3.) * dw * dw - dt) * dw;
@@ -152,7 +170,7 @@ vector<datapoint> method(
                 dx += coef11*(dw*dw-t)*0.5;
             case 'e':
                 dx += coef0*dt + coef1*dw;
-        }        
+        }     */   
         t += dt;
         x = x+dx;
         w += dw;
@@ -167,21 +185,10 @@ vector<datapoint> method(
     return trajectory;
 }
 
-double a=0.1;
+double a=0.5;
 tdouble a_term(tdouble x)
 {
-    if(x > 3)
-    {
-        return -0.5*a*a*exp(-x+2/3)*sech(x);
-    }
-    else if(x < -3)
-    {
-        return 0.5*a*a*exp(x+2/3)*sech(x);
-    }
-    else
-    {
-        return -0.5*a*a*tanh(x)*sech(x)*sech(x);
-    }
+    return -0.5*a*a*tanh(x)*sech(x)*sech(x);
 }
 tdouble b_term(tdouble x)
 {
@@ -195,7 +202,17 @@ int main(){
     Wiener w = Wiener();
     double x0 = 0.1;
     double T = 100;
-    auto traj = method(w, x0, T, a_term, b_term);
+    
+    auto traj = method(w, x0, T, a_term, b_term, 'e');
+    
+    FILE *out;
+    out = fopen("toplot.dat", "w");
+    for(auto it = traj.begin(); it != traj.end(); it++)
+    {
+        fprintf(out, "%lf %lf %lf\n", it->x, it->w, exact(it->w, x0));
+    }
+    fclose(out);
+    return 0;
     
     double errEuler = 0;
     double errMilstein = 0;
@@ -204,11 +221,11 @@ int main(){
     for(int i=0;i<n_proc;i++)
     {
         Wiener w = Wiener(i);    
-        double valExact = exact(w.GetValue(T), x0);
+        double valExact    = exact(w.GetValue(T), x0);
+        double valEuler    = method(w, x0, T, a_term, b_term, 'e').back().x;
         double valMilstein = method(w, x0, T, a_term, b_term, 'm').back().x;
-        double valEuler = method(w, x0, T, a_term, b_term).back().x;
         
-        errEuler += (valEuler-valExact)*(valEuler-valExact);
+        errEuler    += (valEuler-valExact)*(valEuler-valExact);
         errMilstein += (valMilstein-valExact)*(valMilstein-valExact);
     }
     errEuler = sqrt(errEuler/n_proc);
