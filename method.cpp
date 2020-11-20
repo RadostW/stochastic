@@ -126,7 +126,7 @@ vector<datapoint> method(
         // double coef110 = (b*bpp + bp*bp)*a + (b*bppp + 3*bp*bpp)*b*b/2  // sq order = 4
         // double coef111 = b*(b*bpp + bp*bp);     // sq order = 3
 
-        printf("%lf %lf %lf %lf\n", x, b, bp, b*bp, coef11);
+        printf("x%lf b%lf bp%lf bbp%lf c11%lf x%s\n", x, b, bp, b*bp, coef11,x.ToString().c_str());
 
         /*if(adaptive)
         {
@@ -161,7 +161,7 @@ vector<datapoint> method(
         if(method == 'e')
             dx = coef0*dt + coef1*dw;
         if(method == 'm')
-            dx = coef0*dt + coef1*dw + coef11*(dw*dw-t)/2;
+            dx = coef0*dt + coef1*dw + 0.5*coef11*(dw*dw-t);
         /*switch (method)
         {
             case 'w':
@@ -188,7 +188,18 @@ vector<datapoint> method(
 double a=0.5;
 tdouble a_term(tdouble x)
 {
-    return -0.5*a*a*tanh(x)*sech(x)*sech(x);
+    if(x > 3)
+    {
+        return -0.5*a*a*exp(-x+2/3)*sech(x);
+    }
+    else if(x < -3)
+    {
+        return 0.5*a*a*exp(x+2/3)*sech(x);
+    }
+    else
+    {
+        return -0.5*a*a*tanh(x)*sech(x)*sech(x);
+    }
 }
 tdouble b_term(tdouble x)
 {
@@ -203,7 +214,7 @@ int main(){
     double x0 = 0.1;
     double T = 100;
     
-    auto traj = method(w, x0, T, a_term, b_term, 'e');
+    auto traj = method(w, x0, T, a_term, b_term, 'm');
     
     FILE *out;
     out = fopen("toplot.dat", "w");
