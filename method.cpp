@@ -60,8 +60,8 @@ vector<datapoint> method(
     char method='e',
     bool adaptive=false,
     int err_order=0,
-    int n_steps=1000,
-    double target_error_density=0.1
+    int n_steps=800,
+    double target_error_density=0.00115
     //local_error_variance_order=None
     )
 {
@@ -71,8 +71,8 @@ vector<datapoint> method(
     tdouble x = tdouble(x0, 0);
     double t = 0;
     double dt = T/n_steps;
-    double dt_max = dt*100.;
-    double dt_min = dt/100.;
+    double dt_max = dt*10.;
+    double dt_min = dt/10.;
     
     double w = 0;
     double dx;
@@ -124,11 +124,11 @@ vector<datapoint> method(
         coef10 = a*bp + b*b*bpp/2.;     // sq order = 3
         coef11 = b*bp;                  // sq order = 2
         // double coef110 = (b*bpp + bp*bp)*a + (b*bppp + 3*bp*bpp)*b*b/2  // sq order = 4
-        // double coef111 = b*(b*bpp + bp*bp);     // sq order = 3
+        double coef111 = b*(b*bpp + bp*bp);     // sq order = 3
 
-        printf("x%lf b%lf bp%lf bbp%lf c11%lf x%s\n", x, b, bp, b*bp, coef11,x.ToString().c_str());
+        //printf("x%lf b%lf bp%lf bbp%lf c11%lf x%s\n", x.GetValue(), b, bp, b*bp, coef11,x.ToString().c_str());
 
-        /*if(adaptive)
+        if(adaptive)
         {
             function<double(double)> local_error_var_estimate = [](double dt){return 0.;};
             
@@ -147,10 +147,10 @@ vector<datapoint> method(
             
             
             dt = find_root_bin_search(
-                [local_error_var_estimate, target_error_density](double dt){return local_error_var_estimate(dt) - target_error_density*target_error_density*dt*dt;},
+                [local_error_var_estimate, target_error_density](double dt){return sqrt(local_error_var_estimate(dt)/dt) - target_error_density;},
                 dt_min, dt_max, dt
             );            
-        }*/
+        }
 
         dt = min(dt, T-t);
 
@@ -161,7 +161,7 @@ vector<datapoint> method(
         if(method == 'e')
             dx = coef0*dt + coef1*dw;
         if(method == 'm')
-            dx = coef0*dt + coef1*dw + 0.5*coef11*(dw*dw-t);
+            dx = coef0*dt + coef1*dw + 0.5*coef11*(dw*dw-dt);
         /*switch (method)
         {
             case 'w':
@@ -185,7 +185,7 @@ vector<datapoint> method(
     return trajectory;
 }
 
-double a=0.5;
+double a=0.1;
 tdouble a_term(tdouble x)
 {
     if(x > 3)
@@ -211,10 +211,10 @@ double exact(double w, double x0){
 
 int main(){
     Wiener w = Wiener();
-    double x0 = 0.1;
-    double T = 100;
-    
-    auto traj = method(w, x0, T, a_term, b_term, 'm');
+    double x0 = 0;
+    double T = 400;
+    /*
+    auto traj = method(w, x0, T, a_term, b_term, 'e');
     
     FILE *out;
     out = fopen("toplot.dat", "w");
@@ -223,26 +223,36 @@ int main(){
         fprintf(out, "%lf %lf %lf\n", it->x, it->w, exact(it->w, x0));
     }
     fclose(out);
-    return 0;
+    return 0;*/
     
     double errEuler = 0;
+    double errEulerAd = 0;
     double errMilstein = 0;
     
-    int n_proc = 100;
+    double stepsEulerAd = 0;
+    
+    int n_proc = 1000;
     for(int i=0;i<n_proc;i++)
     {
         Wiener w = Wiener(i);    
         double valExact    = exact(w.GetValue(T), x0);
         double valEuler    = method(w, x0, T, a_term, b_term, 'e').back().x;
+        auto eulerAd = method(w, x0, T, a_term, b_term, 'e', true, 4);
+        double valEulerAd  = eulerAd.back().x;
         double valMilstein = method(w, x0, T, a_term, b_term, 'm').back().x;
         
         errEuler    += (valEuler-valExact)*(valEuler-valExact);
+        errEulerAd  += (valEulerAd-valExact)*(valEulerAd-valExact);
         errMilstein += (valMilstein-valExact)*(valMilstein-valExact);
+
+        stepsEulerAd += 1000./(eulerAd.size()-1);
     }
     errEuler = sqrt(errEuler/n_proc);
+    errEulerAd = sqrt(errEulerAd/n_proc);
+    stepsEulerAd /= n_proc; 
     errMilstein = sqrt(errMilstein/n_proc);
-    printf("%lf\n%lf", errEuler, errMilstein);
-/*
+    printf("%lf\n%lf %lf\n%lf", errEuler, errEulerAd, stepsEulerAd, errMilstein);
+    /*
     double errWagnerPlaten=0;
     double errMilstein=0;
     double errEuler=0;
