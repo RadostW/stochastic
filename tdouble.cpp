@@ -11,7 +11,7 @@ class tdouble
 {
  private:
     // TODO(2020 October 19) make maxvars a variable rather than a const
-    static const int maxvars = 2;
+    static const int maxvars = 5;
     double x;
     std::array<double, maxvars> gr;
     std::array< std::array<double, maxvars>, maxvars> hes;
@@ -21,8 +21,10 @@ class tdouble
         gr = ngr;
         hes = nhes;
     }
+
  public:
 
+<<<<<<< HEAD
     std::string ToString()
     {
         auto q = *this;
@@ -52,6 +54,14 @@ class tdouble
         return text;
     }
 
+=======
+    tdouble()
+    {
+        x = 0;
+        for(int i=0;i<maxvars;i++)gr[i]=0;
+        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)hes[i][j]=0;
+    }   
+>>>>>>> origin/RadostWorking
 
     const std::array<double, maxvars> GetGradient()
     {
@@ -204,34 +214,54 @@ class tdouble
         return x != y;
     }
 
+    tdouble& operator+=(const tdouble& rhs)
+    {
+        *this = *this + rhs;
+        return *this;
+    }
+    tdouble& operator-=(const tdouble& rhs)
+    {
+        *this = *this + rhs*(-1.);
+        return *this;
+    }
+    tdouble& operator*=(const tdouble& rhs)
+    {
+        *this = *this * rhs;
+        return *this;
+    }
+    tdouble& operator/=(const tdouble& rhs)
+    {
+        *this = *this / rhs;
+        return *this;
+    }
+
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
     {
-        std::string text;
-        text += std::to_string(q.x);
+        s << q.x;
         for(int i=0;i<maxvars;i++)
         {
             if(q.gr[i]!=0)
             {
-                text+=q.gr[i]>0?"+":"";
-                text+=std::to_string(q.gr[i]);
-                text+="D";
-                text+=std::to_string(i);
+                s << (q.gr[i]>0?"+":"");
+                s << q.gr[i];
+                s << "d";
+                s << i;
             }
         }
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)
         {
             if(q.hes[i][j]!=0)
             {
-                text+=q.hes[i][j]>0?"+":"";
-                text+=std::to_string(q.hes[i][j]);
-                text+="D";
-                text+=std::to_string(i);
-                text+=std::to_string(j);
+                s << (q.hes[i][j]>0?"+":"");
+                s << q.hes[i][j];
+                s << "d";
+                s << i;
+                s << j;
             }
         }
-        return s << text;
     }
 };
+
 
 // Comparison operators with double.
 bool operator< (double x, const tdouble &y){

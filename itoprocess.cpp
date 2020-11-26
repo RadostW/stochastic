@@ -37,51 +37,101 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
-    std::vector<double> SampleEuler(double x0, double tmax, double dt)
+    std::vector<double> SampleAdaptiveMilstein(double x0, double tmin, double tmax, double step)
     {
-        double t = 0;
+
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; dt * i < tmax; i++)
-        {
-            res.push_back(x.GetValue());
-            double a = fa(x).GetValue();
-            double b = fb(x).GetValue();
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
-            x = tdouble(x.GetValue() + a * dt + b * dW, 0);
-        }
-        return res;
-    }
+        double t=0;
 
-    std::vector<double> SampleMilstein(double x0, double tmax, double dt)
-    {
-        double t = 0;
-        tdouble x = tdouble(x0, 0);
-        std::vector<double> res;
-
-        for (int i = 0; dt * i < tmax; i++)
+        for (int i = 0; t < tmax; i++)
         {
-            res.push_back(x.GetValue());
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = t;
+            double x0 = x.GetValue();
+            double stepscaling = std::min(    fabs( (1.*pow(cosh(x0),5.))/(-2. + cosh(2.*x0))  )    , 6.);
+            double send = std::min( sbegin + step * stepscaling  , tmax );
+            double dt = send-sbegin;            
             double a = fa(x).GetValue();
             tdouble fbval = fb(x);
             double b = fbval.GetValue();
             double bp = fbval.GetGradient()[0];
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
             x = tdouble(x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt), 0);
+
+            t = send;
         }
+        res.push_back(x.GetValue()); //Push final value
         return res;
+        
     }
 
-    std::vector<double> SampleWagnerPlaten(double x0, double tmax, double dt)
+    std::vector<double> SampleEuler(double x0, double tmax, double step)
     {
-        double t = 0;
+        return SampleEuler(x0,0,tmax,step);
+    }
+    std::vector<double> SampleEuler(double x0, double tmin, double tmax, double step)
+    {
         tdouble x = tdouble(x0, 0);
         std::vector<double> res;
 
-        for (int i = 0; dt * i < tmax; i++)
+        for (int i = 0; step * i + tmin < tmax; i++)
         {
-            res.push_back(x.GetValue());
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i+tmin;
+            double send = std::min(step*(i+1)+tmin,tmax);
+            double dt = send-sbegin;
+            double a = fa(x).GetValue();
+            double b = fb(x).GetValue();
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            x = tdouble(x.GetValue() + a * dt + b * dW, 0);
+        }
+        res.push_back(x.GetValue()); //Push final value
+        return res;
+    }
+
+    std::vector<double> SampleMilstein(double x0, double tmax, double step)
+    {
+        return SampleMilstein(x0,0,tmax,step);
+    }
+    std::vector<double> SampleMilstein(double x0, double tmin, double tmax, double step)
+    {
+        tdouble x = tdouble(x0, 0);
+        std::vector<double> res;
+
+        for (int i = 0; tmin + step * i < tmax; i++)
+        {
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = tmin + step*i;
+            double send = std::min(tmin + step*(i+1),tmax);
+            double dt = send-sbegin;            
+            double a = fa(x).GetValue();
+            tdouble fbval = fb(x);
+            double b = fbval.GetValue();
+            double bp = fbval.GetGradient()[0];
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            x = tdouble(x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt), 0);
+        }
+        res.push_back(x.GetValue()); //Push final value
+        return res;
+    }
+
+    std::vector<double> SampleWagnerPlaten(double x0, double tmax, double step)
+    {
+        return SampleWagnerPlaten(x0, 0, tmax, step);
+    }
+    std::vector<double> SampleWagnerPlaten(double x0, double tmin, double tmax, double step)
+    {
+        tdouble x = tdouble(x0, 0);
+        std::vector<double> res;
+
+        for (int i = 0; tmin + step * i < tmax; i++)
+        {
+            res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
+            double sbegin = tmin + step*i;
+            double send = std::min(tmin + step*(i+1),tmax);
+            double dt = send-sbegin;
             tdouble faval = fa(x);
             double a = faval.GetValue();
             double ap = faval.GetGradient()[0];
@@ -92,9 +142,9 @@ class ItoProcess
             double bp = fbval.GetGradient()[0];
             double bpp = fbval.GetHessian()[0][0];
 
-            double dW = W.GetValue((i+1)*dt) - W.GetValue(i*dt);
-            double dZ = W.GetZ(i*dt,(i+1)*dt);
-            
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            double dZ = W.GetZ(sbegin,send);
+
             x = tdouble(
                 x.GetValue() + a * dt + b * dW + 0.5 * b * bp * (dW * dW - dt) +
                     b * ap * dZ + 0.5 * (a * ap + 0.5 * b * b * app) * dt * dt +
@@ -102,7 +152,13 @@ class ItoProcess
                     0.5 * b * (b * bpp + bp * bp) * ((1. / 3.) * dW * dW - dt) * dW,
                 0);
         }
+        res.push_back(x.GetValue()); //Push final value
         return res;
+    }
+
+    double GetWienerValue(double time)
+    {
+        return W.GetValue(time);
     }
 
  private:
@@ -113,5 +169,18 @@ class ItoProcess
 
     // Underlying random process.
     Wiener W;
+
+
+    // Handy things
+    double sech(double x)
+    {
+        return 1/cosh(x);
+    }
+    
+    template<typename T>
+    T last(std::vector<T> A)
+    {
+        return *A.rbegin();
+    }
 };
 
