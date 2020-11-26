@@ -37,7 +37,7 @@ adaptive step
 
 ACTION POINTS:
 
-1. Posprzatanie Wienera, (wyzsze calki -- pozniej)
+1. Posprzatanie Wienera, (wyzsze calki -- pozniej) [DONE]
 2. Posprzatanie autogradu -> std::array -> double, (pamietamy nte pochodne - pozniej), wszystko jest jedna zmienna.
 3. Rozsadny ItoIntegral, consistent return values, reasonable input parameters
 4. Napisac rownania bez balaganu - sinh, koloid przy scianie, dyfuzja rotacyjna (?)

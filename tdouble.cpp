@@ -24,7 +24,6 @@ class tdouble
 
  public:
 
-<<<<<<< HEAD
     std::string ToString()
     {
         auto q = *this;
@@ -54,14 +53,12 @@ class tdouble
         return text;
     }
 
-=======
     tdouble()
     {
         x = 0;
         for(int i=0;i<maxvars;i++)gr[i]=0;
         for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)hes[i][j]=0;
     }   
->>>>>>> origin/RadostWorking
 
     const std::array<double, maxvars> GetGradient()
     {
