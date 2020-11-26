@@ -1,0 +1,50 @@
+overview gdzie ludzie robia tylko eulera
+
+(sensowne pochodne w c++) -> ?? intrnieja autogrady
+
+wiener sampling consistent - skalarnego ilestam calek
+
+analiza tego co ludzie robia teraz przy scianie -> umiemy lepiej
+  cos co nie dziala jak sie odbije w scianie
+
+telegraphic noise
+
+adaptive step
+  podgladanie (++ skalarne)
+  bez podgladania
+
+adaptive step post-processing
+  samplowanie po fakcie
+
+trajektorie ktore wala w sciane
+rozklady ktore nie pasuja
+benchmark na "czas dzialania" -- uzasadnic pamietanie gradientow -- hardware dependence?
+   liczba wywolan aterm() bterm(), albo czas liczenia gradientu etc
+pokazanie ze jak jest zero driftu i szumu to jest bariera -> jedno zdanie
+
+liczenie wspolczynnikow w rownaniu nie na kazdym kroku ale sprytnie
+
+po ludzku jak sie liczy error term (wykladnik na przyklad)
+
+------
+
+obracanie patyka w 3d - dyfuzja rotacyjna - singularity na biegunie
+
+adaptive step
+  vektorowy (bez podgladania) - heura z platena
+
+
+
+ACTION POINTS:
+
+1. Posprzatanie Wienera, (wyzsze calki -- pozniej)
+2. Posprzatanie autogradu -> std::array -> double, (pamietamy nte pochodne - pozniej), wszystko jest jedna zmienna.
+3. Rozsadny ItoIntegral, consistent return values, reasonable input parameters
+4. Napisac rownania bez balaganu - sinh, koloid przy scianie, dyfuzja rotacyjna (?)
+5. Zaimplementowac zle calkowanie - z gupimi trickami
+6. Mały nosnik - alternatywna definicja Wienera -> tylko euler, milstein, ale nie platen
+7. Znalezc rozklady ktore nie pasuja - przy scianie zly rozklad
+8. Liczenie wspolczynnikow rzadziej
+9. Kod do benchmarkowania, RMSE, cos na pathwise convergence, liczba wywolan rzeczy
+
+
