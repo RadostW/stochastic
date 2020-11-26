@@ -55,7 +55,7 @@ int main()
         double valWagnerPlaten = *proc.SampleWagnerPlaten(x0, tmax, dt).rbegin();
         double valMilstein     = *proc.SampleMilstein(x0, tmax, dt).rbegin();
         double valEuler        = *proc.SampleEuler(x0, tmax, dt).rbegin();
-        auto samAdaptiveMilstein = proc.SampleAdaptiveMilstein(x0, 0, tmax, (1./2.41)*dt);
+        auto samAdaptiveMilstein = proc.SampleAdaptiveMilstein(x0, 0, tmax, (1./2.73)*dt);
         double valAdaptiveMilstein= *samAdaptiveMilstein.rbegin();
         stepsAdaptiveMilstein += samAdaptiveMilstein.size()-1;
         

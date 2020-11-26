@@ -50,7 +50,7 @@ class ItoProcess
             res.push_back(x.GetValue()); // Push value BEFORE each step to have initial value in response vector
             double sbegin = t;
             double x0 = x.GetValue();
-            double stepscaling = std::min(    fabs( (1.*pow(cosh(x0),5.))/(-2. + cosh(2.*x0))  )    , 4.);
+            double stepscaling = std::min(    fabs( (1.*pow(cosh(x0),5.))/(-2. + cosh(2.*x0))  )    , 6.);
             double send = std::min( sbegin + step * stepscaling  , tmax );
             double dt = send-sbegin;            
             double a = fa(x).GetValue();
