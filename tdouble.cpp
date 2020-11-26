@@ -2,6 +2,7 @@
 // This project is licensed under the terms of the MIT license.
 #pragma once
 #include<array>
+#include<iostream>
 #include"pmath.cpp"
 
 // Stores a value together with a Taylor expansion.
@@ -9,13 +10,13 @@
 // Supports many functions of <cmath>.
 class tdouble
 {
+    
  private:
-    // TODO(2020 October 19) make maxvars a variable rather than a const
     static const int maxvars = 5;
     double x;
-    std::array<double, maxvars> gr;
-    std::array< std::array<double, maxvars>, maxvars> hes;
-    tdouble(double nx, std::array<double, maxvars> ngr, std::array<std::array<double, maxvars>, maxvars> nhes)
+    double gr;
+    double hes;
+    tdouble(double nx, double ngr, double nhes)
     {
         x = nx;
         gr = ngr;
@@ -29,42 +30,28 @@ class tdouble
         auto q = *this;
         std::string text;
         text += std::to_string(q.x);
-        for(int i=0;i<maxvars;i++)
-        {
-            if(q.gr[i]!=0)
-            {
-                text+=q.gr[i]>0?"+":"";
-                text+=std::to_string(q.gr[i]);
-                text+="D";
-                text+=std::to_string(i);
-            }
-        }
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)
-        {
-            if(q.hes[i][j]!=0)
-            {
-                text+=q.hes[i][j]>0?"+":"";
-                text+=std::to_string(q.hes[i][j]);
-                text+="D";
-                text+=std::to_string(i);
-                text+=std::to_string(j);
-            }
-        }
+        text+=q.gr>0?"+":"";
+        text+=std::to_string(q.gr);
+        text+="Dx";
+        text+=q.hes>0?"+":"";
+        text+=std::to_string(q.hes);
+        text+="Dxx";
+        
         return text;
     }
 
     tdouble()
     {
         x = 0;
-        for(int i=0;i<maxvars;i++)gr[i]=0;
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)hes[i][j]=0;
+        gr = 0;
+        hes = 0;
     }   
 
-    const std::array<double, maxvars> GetGradient()
+    const double GetGradient()
     {
         return gr;
     }
-    const std::array< std::array<double, maxvars>, maxvars> GetHessian()
+    const double GetHessian()
     {
         return hes;
     }
@@ -72,13 +59,16 @@ class tdouble
     {
         return x;
     }
-    tdouble(double val, int id)
+    tdouble(double val)
     {
-        if(id > maxvars) throw 0xBAD;
         x = val;
-        for(int i=0;i<maxvars;i++)gr[i]=0;
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)hes[i][j]=0;
-        gr[id]=1;
+        gr = 0;
+        hes = 0;
+    }
+
+    static tdouble Variable(double val)
+    {
+        return tdouble(val,1,0);
     }
 
     // Provides interface for creating tdouble functions out of double(double) functions
@@ -86,11 +76,11 @@ class tdouble
     tdouble Apply(double fun(double), double der(double), double dder(double))
     {
         double nx = fun(x);
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
+        double ngr;
+        double nhes;
         
-        for(int i=0;i<maxvars;i++)ngr[i] = gr[i]*der(x);
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = hes[i][j]*der(x) + gr[i]*gr[j]*dder(x);
+        ngr = gr*der(x);
+        nhes = hes*der(x) + gr*gr*dder(x);
         
         return tdouble(nx, ngr, nhes);
     }
@@ -100,11 +90,11 @@ class tdouble
     tdouble Inverse() const
     {
         double nx = 1/x;
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
+        double ngr;
+        double nhes;
         
-        for(int i=0;i<maxvars;i++)ngr[i] = -gr[i]*(1/x)*(1/x);
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)nhes[i][j] = -hes[i][j]*(1/x)*(1/x) + gr[i]*gr[j]*(2/(x*x*x));
+        ngr = -gr*(1/x)*(1/x);
+        nhes = -hes*(1/x)*(1/x) + gr*gr*(2/(x*x*x));
         
         return tdouble(nx, ngr, nhes);
     }
@@ -114,63 +104,38 @@ class tdouble
     tdouble operator+(const tdouble& rhs) const
     {
         double nx = this->x + rhs.x;
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
-        for(int i=0;i<maxvars;i++)ngr[i] = (rhs.gr)[i] + (this->gr)[i];
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs.hes[i][j] + (this->hes)[i][j];
+        double ngr;
+        double nhes;
+        ngr = (rhs.gr) + (this->gr);
+        nhes = rhs.hes + (this->hes);
         
         return tdouble(nx, ngr, nhes);
     }
-    // Addition with scalar.
-    tdouble operator+(const double rhs) const
-    {
-        double nx = this->x + rhs;
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
-        for(int i=0;i<maxvars;i++)ngr[i] = (this->gr)[i];
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=(this->hes)[i][j];
-        
-        return tdouble(nx, ngr, nhes);
-    }
-    // Multiplicaiton with scalar.
-    tdouble operator*(const double& rhs) const
-    {
-        double nx = x * rhs;
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
-        for(int i=0;i<maxvars;i++)ngr[i] = rhs*(this->gr)[i];
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j]=rhs*(this->hes)[i][j];
-        
-        return tdouble(nx, ngr, nhes);
-    }
+    
     // Multiplication with type.
     tdouble operator*(const tdouble& rhs) const
     {
         double nx = this->x * rhs.x;
-        std::array<double, maxvars> ngr;
-        std::array< std::array<double, maxvars>, maxvars> nhes;
-        for(int i=0;i<maxvars;i++)ngr[i] = x*(rhs.gr)[i] + rhs.x * (this->gr)[i];
+        double ngr;
+        double nhes;
+        ngr = x*(rhs.gr) + rhs.x * (this->gr);
         auto x1 = this->x;
         auto x2 = rhs.x;
         auto hes1 = this->hes;
         auto hes2 = rhs.hes;
         auto g1 = this->gr;
         auto g2 = rhs.gr;
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++) nhes[i][j] = g1[i]*g2[j]+g2[i]*g1[j]+x1*hes2[i][j]+x2*hes1[i][j];
+        nhes = g1*g2+g2*g1+x1*hes2+x2*hes1;
         
         return tdouble(nx, ngr, nhes);
     }
+    
     // Division by type.
     tdouble operator/(const tdouble&rhs) const
     {
         return (*this)*rhs.Inverse();
     }
-    // Division by scalar.
-    tdouble operator/(const double rhs) const
-    {
-        return (*this)*(1/rhs);
-    }
-
+    
     // Comparison operators tdouble.
     bool operator< (const tdouble &y) const {
         return x < y.x;
@@ -191,26 +156,6 @@ class tdouble
         return x != y.x;
     }
     
-    // Comparison operators with double.
-    bool operator< (double y) const {
-        return x < y;
-    }
-    bool operator<= (double y) const {
-        return x <= y;
-    }
-    bool operator> (double y) const {
-        return x > y;
-    }
-    bool operator>= (double y) const {
-        return x >= y;
-    }
-    bool operator== (double y) const {
-        return x == y;
-    }
-    bool operator!= (double y) const {
-        return x != y;
-    }
-
     tdouble& operator+=(const tdouble& rhs)
     {
         *this = *this + rhs;
@@ -235,81 +180,23 @@ class tdouble
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
     {
         s << q.x;
-        for(int i=0;i<maxvars;i++)
-        {
-            if(q.gr[i]!=0)
-            {
-                s << (q.gr[i]>0?"+":"");
-                s << q.gr[i];
-                s << "d";
-                s << i;
-            }
-        }
-        for(int i=0;i<maxvars;i++)for(int j=0;j<maxvars;j++)
-        {
-            if(q.hes[i][j]!=0)
-            {
-                s << (q.hes[i][j]>0?"+":"");
-                s << q.hes[i][j];
-                s << "d";
-                s << i;
-                s << j;
-            }
-        }
+        s << (q.gr>0?"+":"");
+        s << q.gr;
+        s << "dx ";
+        s << (q.hes>0?"+":"");
+        s << q.hes;
+        s << "dxx";
     }
+    
 };
-
-
-// Comparison operators with double.
-bool operator< (double x, const tdouble &y){
-    return y > x;
-}
-bool operator<= (const double &x, const tdouble &y){
-    return y >= x;
-}
-bool operator> (const double &x, const tdouble &y){
-    return y < x;
-}
-bool operator>= (const double &x, const tdouble &y){
-    return y <= x;
-}
-bool operator== (const double &x, const tdouble &y){
-    return y == x;
-}
-bool operator!= (const double &x, const tdouble &y){
-    return y != x;
-}
-
 
 tdouble operator-(const tdouble &q){
     return q*(-1.);
 }
 
-tdouble operator+(double lhs, const tdouble& rhs)
-{
-    return rhs+lhs;
-} 
-
 tdouble operator-(const tdouble& lhs, const tdouble& rhs)
 {
     return lhs+rhs*(-1);
-}
-tdouble operator-(double lhs, const tdouble& rhs)
-{
-    return lhs+rhs*(-1);
-}
-tdouble operator-(const tdouble&lhs, double rhs)
-{
-    return lhs+(-rhs);
-}
-
-tdouble operator*(double lhs, const tdouble& rhs)
-{
-    return (rhs*lhs);
-}
-tdouble operator/(double lhs, const tdouble& rhs)
-{
-    return lhs*(rhs.Inverse());
 }
 
 
