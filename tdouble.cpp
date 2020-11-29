@@ -199,6 +199,11 @@ tdouble operator-(const tdouble& lhs, const tdouble& rhs)
     return lhs+rhs*(-1);
 }
 
+tdouble operator*(const double& lhs, const tdouble& rhs)
+{
+    return rhs*lhs;
+}
+
 
 // Common functions
 tdouble cos(tdouble x)
