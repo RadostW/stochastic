@@ -7,8 +7,10 @@
 #include <cmath>
 #include <map>
 #include <time.h>
+#include <functional>
 #include "tdouble.cpp"
 #include "wiener.cpp"
+#include "utils.cpp"
 
 // Provides abstraction of an Ito Process,
 // See https://en.wikipedia.org/wiki/It%C3%B4_calculus#It%C3%B4_processes for details
@@ -49,7 +51,6 @@ class ItoProcess
     // Stores integration settings
     IntegrationOptions IntegrationOptions_;
 
-    //
     std::vector<PathPoint> SampleEulerMaruyama(double x0, double tmax)
     {
         tdouble x = tdouble::Variable(x0);
@@ -95,11 +96,133 @@ class ItoProcess
         }
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
+    }    
+    
+    int n_steps;
+    double t;
+    
+    double dt;
+    double dx;
+    double dw;
+    double dz;
+    
+    tdouble x;
+    tdouble faval;
+    tdouble fbval;
+
+    double a;
+    double ap;
+    double app;
+    double b;
+    double bp;
+    double bpp;
+    
+    double coef0;
+    double coef1;
+    double coef00;
+    double coef01;
+    double coef10;
+    double coef11;
+    double coef111;
+
+    int error_order;
+    std::function<double(double)> local_mse_estimate;
+    double target_error_density = 1e-2;
+
+    double GetDt(){
+        if(IntegrationOptions_.integrationStyle == Fixed)
+            return IntegrationOptions_.stepSize;
+        
+        if(IntegrationOptions_.integrationStyle == Adaptive){
+            local_mse_estimate = [](double dt){return 0;};
+            if(error_order >= 2 & IntegrationOptions_.integratorType == EulerMaruyama)
+                local_mse_estimate = [this](double dt){return coef11*coef11*dt*dt;};
+            if(error_order >= 3 & IntegrationOptions_.integratorType != WagnerPlaten)
+                local_mse_estimate = [this](double dt){return local_mse_estimate(dt) + (coef01*coef01+coef10*coef10+coef111*coef111)*dt*dt*dt;};
+            if(error_order >= 4)
+                local_mse_estimate = [this](double dt){return local_mse_estimate(dt) + coef00*coef00*dt*dt*dt*dt;};  // TODO: address the fact that coef_<1x0, 2x1> should also be here!
+            
+            dt = find_root_bin_search(
+                [this](double dt){return sqrt(local_mse_estimate(dt)/dt) - target_error_density;},
+                IntegrationOptions_.stepSize/10.,
+                IntegrationOptions_.stepSize*10.,
+                dt
+            );
+            return dt;
+        }
+        throw std::logic_error("AdaptivePredictive not implemented!");
     }
 
-
+    double GetDx(){
+        dx = 0;
+        dw = W.GetValue(t+dt) - W.GetValue(t);
+        dz = W.GetZ(t, t+dt);
+        
+        if(IntegrationOptions_.integratorType == EulerMaruyama)
+            dx += coef0*dt + coef1*dw;
+        if(IntegrationOptions_.integratorType == Milstein)
+            dx += coef11*(dw*dw-dt);
+        if(IntegrationOptions_.integratorType == WagnerPlaten)
+            dx += coef01*dz + coef10*(dw*dt-dz) + coef111*((1. / 3.) * dw * dw - dt) * dw;
+        
+        return dx;        
+    }
 
   public:
+    std::vector<PathPoint> SamplePathGeneral(double x0, double tmax){
+        double dx;        
+        
+        n_steps = 0;
+        t = 0;
+        x = tdouble::Variable(x0);        
+        std::vector<PathPoint> res;
+
+        while(t < tmax)
+        {
+            // Store most recent entry.
+            res.push_back(PathPoint(t,x.GetValue()));// Push value BEFORE each step to have initial value in response vector
+
+            // Evaluete coeficients
+            faval = fa(x);
+            fbval = fb(x);
+
+            a   = faval.GetValue();
+            ap  = faval.GetGradient();
+            app = faval.GetHessian();
+            b   = fbval.GetValue();
+            bp  = fbval.GetGradient();
+            bpp = fbval.GetHessian();
+
+            coef0   = a;
+            coef1   = b;
+            coef00  = a*ap + b*b*app/2.;
+            coef01  = b*ap;
+            coef10  = a*bp + b*b*bpp/2.;
+            coef11  = b*bp;
+            coef111 = b*(b*bpp + bp*bp);
+
+            // Determine dt
+            dt = GetDt();
+            dt = std::min(dt, tmax-t); // Don't go over tmax
+
+            // Update x
+            dx = GetDx();
+            x = tdouble::Variable(x.GetValue() + dx);
+
+            // Update t
+            n_steps++;
+            if(IntegrationOptions_.integrationStyle == Fixed)
+                t = n_steps*IntegrationOptions_.stepSize;
+            else
+                t += dt;
+        }
+
+        // Push final value
+        res.push_back(PathPoint(tmax,x.GetValue()));
+
+        return res;
+    }
+
     // Constructs Ito process out of two tdouble->tdouble functions.
     // Consistent with definition:
     // dX = drift(X) dt + volitality(X) dW
