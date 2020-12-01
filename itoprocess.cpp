@@ -27,6 +27,8 @@ class ItoProcess
         IntegratorType integratorType = Milstein;
         IntegrationStyle integrationStyle = Fixed;
         double stepSize = 0.01;
+        int errorTerms = 2;
+        double targetErrorDensity = 1e-2;
     };
     struct PathPoint
     {
@@ -73,23 +75,48 @@ class ItoProcess
         return res;
     }
 
-    std::vector<PathPoint> SampleEulerAdaptive(double x0, double tmax)
+    std::vector<PathPoint> SampleEulerMaruyamaAdaptive(double x0, double tmax)
     {
         tdouble x = tdouble::Variable(x0);
         std::vector<PathPoint> res;
-        double step = IntegrationOptions_.stepSize;
+        double dt = IntegrationOptions_.stepSize;
         double tmin = 0;
+        double t = tmin;
 
-        for (int i = 0; step * i + tmin < tmax; i++)
+        while(t < tmax)
         {
-            res.push_back(PathPoint(step*i,x.GetValue()));// Push value BEFORE each step to have initial value in response vector
-            double sbegin = step*i+tmin;
-            double send = std::min(step*(i+1)+tmin,tmax);
-            double dt = send-sbegin;
-            double a = fa(x).GetValue();
-            double b = fb(x).GetValue();
-            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            res.push_back(PathPoint(t, x.GetValue()));// Push value BEFORE each step to have initial value in response vector
+            
+            tdouble faval = fa(x);
+            tdouble fbval = fb(x); 
+            
+            double a   = faval.GetValue();
+            double ap  = faval.GetGradient();
+            double app = faval.GetHessian();
+            double b   = fbval.GetValue();
+            double bp  = fbval.GetGradient();
+            double bpp = fbval.GetHessian();
+            
+            // E R^2/dt^2 = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
+            double mse_density_polynomial_coefs[] = {
+                pow(b*bp, 2),
+                pow(b*ap, 2) + pow(a*bp + b*b*bpp/2., 2) + pow(b*(b*bpp + bp*bp), 2),
+                pow(a*ap + b*b*app/2., 2) + pow(b*(b*app + ap*bp), 2) // TODO: I_101 and I_110 should be here but require third derivative
+            };
+            
+            // Solving sqrt(E R^2/dt^2) = target_error_density
+            mse_density_polynomial_coefs[0] -= pow(IntegrationOptions_.targetErrorDensity, 2);
+            dt = solve_increasing_poly(
+                mse_density_polynomial_coefs, 
+                IntegrationOptions_.errorTerms,
+                IntegrationOptions_.stepSize/10,
+                IntegrationOptions_.stepSize*10,
+                dt
+            );
+            dt = std::min(dt, tmax-t);
+            double dW = W.GetValue(t+dt) - W.GetValue(t);
             x = tdouble::Variable(x.GetValue() + a * dt + b * dW);
+            t += dt;
         }
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
@@ -259,13 +286,13 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
-    /*
     std::vector<PathPoint> SamplePath(double x0, double tmax)
     {
         if(IntegrationOptions_.integratorType == EulerMaruyama && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleEulerMaruyama(x0,tmax);
+        else if(IntegrationOptions_.integratorType == EulerMaruyama && 
+            IntegrationOptions_.integrationStyle == Adaptive) return SampleEulerMaruyamaAdaptive(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
     }
-    */
 };
