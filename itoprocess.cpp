@@ -51,8 +51,29 @@ class ItoProcess
     // Stores integration settings
     IntegrationOptions IntegrationOptions_;
 
-    /*
     std::vector<PathPoint> SampleEulerMaruyama(double x0, double tmax)
+    {
+        tdouble x = tdouble::Variable(x0);
+        std::vector<PathPoint> res;
+        double step = IntegrationOptions_.stepSize;
+        double tmin = 0;
+
+        for (int i = 0; step * i + tmin < tmax; i++)
+        {
+            res.push_back(PathPoint(step*i,x.GetValue()));// Push value BEFORE each step to have initial value in response vector
+            double sbegin = step*i+tmin;
+            double send = std::min(step*(i+1)+tmin,tmax);
+            double dt = send-sbegin;
+            double a = fa(x).GetValue();
+            double b = fb(x).GetValue();
+            double dW = W.GetValue(send) - W.GetValue(sbegin);
+            x = tdouble::Variable(x.GetValue() + a * dt + b * dW);
+        }
+        res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
+        return res;
+    }
+
+    std::vector<PathPoint> SampleEulerAdaptive(double x0, double tmax)
     {
         tdouble x = tdouble::Variable(x0);
         std::vector<PathPoint> res;
@@ -98,40 +119,8 @@ class ItoProcess
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
     }    
-    */
     
-    int n_steps;
-    double t;
-    
-    double dt;
-    double dx;
-    double dw;
-    double dz;
-    
-    tdouble x;
-    tdouble faval;
-    tdouble fbval;
-
-    double a;
-    double ap;
-    double app;
-    double b;
-    double bp;
-    double bpp;
-    
-    double coef0;
-    double coef1;
-    double coef00;
-    double coef01;
-    double coef10;
-    double coef11;
-    double coef111;
-
-    int error_order;
-    std::function<double(double)> local_mse_estimate;
-    double target_error_density = 1e-2;
-
-    double GetDt(){
+    /*double GetDt(){
         if(IntegrationOptions_.integrationStyle == Fixed)
             return IntegrationOptions_.stepSize;
         
@@ -179,7 +168,6 @@ class ItoProcess
         return dx;        
     }
 
-  public:
     std::vector<PathPoint> SamplePathGeneral(double x0, double tmax){
         double dx;        
         
@@ -233,7 +221,9 @@ class ItoProcess
 
         return res;
     }
+    */
 
+  public:
     // Constructs Ito process out of two tdouble->tdouble functions.
     // Consistent with definition:
     // dX = drift(X) dt + volitality(X) dW
