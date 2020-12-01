@@ -51,6 +51,7 @@ class ItoProcess
     // Stores integration settings
     IntegrationOptions IntegrationOptions_;
 
+    /*
     std::vector<PathPoint> SampleEulerMaruyama(double x0, double tmax)
     {
         tdouble x = tdouble::Variable(x0);
@@ -97,6 +98,7 @@ class ItoProcess
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
     }    
+    */
     
     int n_steps;
     double t;
@@ -258,6 +260,7 @@ class ItoProcess
         W = Wiener(ts.tv_nsec);
     }
 
+    /*
     std::vector<PathPoint> SamplePath(double x0, double tmax)
     {
         if(IntegrationOptions_.integratorType == EulerMaruyama && 
@@ -265,5 +268,5 @@ class ItoProcess
         else if(IntegrationOptions_.integratorType == Milstein && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
     }
+    */
 };
-
