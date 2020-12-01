@@ -136,21 +136,30 @@ class ItoProcess
             return IntegrationOptions_.stepSize;
         
         if(IntegrationOptions_.integrationStyle == Adaptive){
-            local_mse_estimate = [](double dt){return 0;};
-            if(error_order >= 2 & IntegrationOptions_.integratorType == EulerMaruyama)
-                local_mse_estimate = [this](double dt){return coef11*coef11*dt*dt;};
-            if(error_order >= 3 & IntegrationOptions_.integratorType != WagnerPlaten)
-                local_mse_estimate = [this](double dt){return local_mse_estimate(dt) + (coef01*coef01+coef10*coef10+coef111*coef111)*dt*dt*dt;};
-            if(error_order >= 4)
-                local_mse_estimate = [this](double dt){return local_mse_estimate(dt) + coef00*coef00*dt*dt*dt*dt;};  // TODO: address the fact that coef_<1x0, 2x1> should also be here!
-            
             dt = find_root_bin_search(
-                [this](double dt){return sqrt(local_mse_estimate(dt)/dt) - target_error_density;},
+                [this](double dt){return sqrt(LocalMSEEstimate(dt))/dt - target_error_density;},
                 IntegrationOptions_.stepSize/10.,
                 IntegrationOptions_.stepSize*10.,
                 dt
             );
             return dt;
+        }
+        throw std::logic_error("AdaptivePredictive not implemented!");
+    }
+
+    double LocalMSEEstimate(double dt)
+    {
+        if(IntegrationOptions_.integrationStyle == Adaptive)
+        {
+            double mse = 0;
+            if(error_order >= 2 & IntegrationOptions_.integratorType == EulerMaruyama)
+                mse += coef11*coef11*dt*dt;
+            if(error_order >= 3 & IntegrationOptions_.integratorType != WagnerPlaten)
+                mse += (coef01*coef01+coef10*coef10+coef111*coef111)*dt*dt*dt;
+            if(error_order >= 4)
+                mse += coef00*coef00*dt*dt*dt*dt;  // TODO: address the fact that coef_<1x0, 2x1> should also be here!
+            
+            return mse;
         }
         throw std::logic_error("AdaptivePredictive not implemented!");
     }
