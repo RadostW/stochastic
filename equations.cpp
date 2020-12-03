@@ -1,19 +1,27 @@
 #include "tdouble.cpp"
 
-/*
-TODO: proper visiblity and inheritance
-class Equation 
-{
-    tdouble (*drift)(tdouble);
-    tdouble (*volatility)(tdouble);
-    double x0;
-    double tmax;
-    double (*exact_solution)(double x0, double w);
-};
-*/
 
-// TODO: proper visiblity and inheritance
-class SinhEquation
+// Interfaces to talk to the SDE solver
+
+// Stochastic equation defined as:
+// dX = \mu dt + \sigma dW
+// \mu(X) is given by drift(x)
+// \sigma(X) is given by volatility(x)
+class StochasticDifferentialEquation
+{
+  public:
+    virtual tdouble drift(tdouble x) = 0;
+    virtual tdouble volatility(tdouble x) = 0;    
+};
+// Child class with added exact solution
+class ExactStochasticDifferentialEquation : public StochasticDifferentialEquation
+{
+  public:
+    virtual double exactSolution(double x0,double w,double t) = 0;
+};
+
+// Explicit implementation of an equation with exact solution
+class SinhEquation : public ExactStochasticDifferentialEquation
 {
     public:
 
@@ -32,7 +40,7 @@ class SinhEquation
     {
         return a*sech(x);
     }
-    double exactSolution(double x0, double w)
+    double exactSolution(double x0, double w, double t)
     {
         return asinh(a*w + sinh(x0)); 
     }
