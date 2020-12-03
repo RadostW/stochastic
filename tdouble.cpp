@@ -180,10 +180,10 @@ class tdouble
     friend std::ostream & operator <<(std::ostream &s, const tdouble q)
     {
         s << q.x;
-        s << (q.gr>0?"+":"");
+        s << (q.gr>=0?"+":"");
         s << q.gr;
         s << "dx ";
-        s << (q.hes>0?"+":"");
+        s << (q.hes>=0?"+":"");
         s << q.hes;
         s << "dxx";
     }
