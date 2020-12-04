@@ -83,6 +83,9 @@ class ItoProcess
         double tmin = 0;
         double t = tmin;
 
+        if(IntegrationOptions_.errorTerms > 3)
+            throw std::logic_error("SampleEulerMaruyamaAdaptive can't handle that much error terms");
+
         while(t < tmax)
         {
             res.push_back(PathPoint(t, x.GetValue()));// Push value BEFORE each step to have initial value in response vector
@@ -146,6 +149,56 @@ class ItoProcess
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
     }    
+
+    std::vector<PathPoint> SampleMilsteinAdaptive(double x0, double tmax)
+    {
+        tdouble x = tdouble::Variable(x0);
+        std::vector<PathPoint> res;
+        double dt = IntegrationOptions_.stepSize;
+        double tmin = 0;
+        double t = tmin;
+
+        if(IntegrationOptions_.errorTerms > 2)
+            throw std::logic_error("SampleMilsteinAdaptive can't handle that much error terms");
+
+        while(t < tmax)
+        {
+            res.push_back(PathPoint(t, x.GetValue()));// Push value BEFORE each step to have initial value in response vector
+            
+            tdouble faval = fa(x);
+            tdouble fbval = fb(x); 
+            
+            double a   = faval.GetValue();
+            double ap  = faval.GetGradient();
+            double app = faval.GetHessian();
+            double b   = fbval.GetValue();
+            double bp  = fbval.GetGradient();
+            double bpp = fbval.GetHessian();
+            
+            // E R^2/dt^2 = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
+            double mse_density_polynomial_coefs[] = {
+                0,
+                pow(b*ap, 2) + pow(a*bp + b*b*bpp/2., 2) + pow(b*(b*bpp + bp*bp), 2),
+                pow(a*ap + b*b*app/2., 2) + pow(b*(b*app + ap*bp), 2) // TODO: I_101 and I_110 should be here but require third derivative
+            };
+            
+            // Solving sqrt(E R^2/dt^2) = target_error_density
+            mse_density_polynomial_coefs[0] -= pow(IntegrationOptions_.targetErrorDensity, 2);
+            dt = solve_increasing_poly(
+                mse_density_polynomial_coefs, 
+                IntegrationOptions_.errorTerms + 1,
+                IntegrationOptions_.stepSize/10,
+                IntegrationOptions_.stepSize*10,
+                dt
+            );
+            dt = std::min(dt, tmax-t);
+            double dW = W.GetValue(t+dt) - W.GetValue(t);
+            x = tdouble::Variable(x.GetValue() + a * dt + b * dW + b*bp*(dW*dW-dt));
+            t += dt;
+        }
+        res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
+        return res;
+    }
     
     /*double GetDt(){
         if(IntegrationOptions_.integrationStyle == Fixed)
@@ -294,5 +347,7 @@ class ItoProcess
             IntegrationOptions_.integrationStyle == Adaptive) return SampleEulerMaruyamaAdaptive(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
+        else if(IntegrationOptions_.integratorType == Milstein && 
+            IntegrationOptions_.integrationStyle == Adaptive) return SampleMilsteinAdaptive(x0,tmax);
     }
 };
