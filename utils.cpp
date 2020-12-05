@@ -9,7 +9,7 @@ double pow(double x, int n)
 double eval_poly(double x, double* coefs, int order)
 {
   double y = 0;
-  for(int i = 0; i <= order; i++) y += coefs[order]*pow(x, i);
+  for(int i = 0; i <= order; i++) y += coefs[i]*pow(x, i);
   return y;
 }
 

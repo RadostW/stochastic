@@ -27,7 +27,7 @@ class ItoProcess
         IntegratorType integratorType = Milstein;
         IntegrationStyle integrationStyle = Fixed;
         double stepSize = 0.01;
-        int errorTerms = 2;
+        int errorTerms = 1;
         double targetErrorDensity = 1e-2;
     };
     struct PathPoint
@@ -114,7 +114,8 @@ class ItoProcess
                 IntegrationOptions_.errorTerms,
                 IntegrationOptions_.stepSize/10,
                 IntegrationOptions_.stepSize*10,
-                dt
+                dt,
+                IntegrationOptions_.targetErrorDensity/100
             );
             dt = std::min(dt, tmax-t);
             double dW = W.GetValue(t+dt) - W.GetValue(t);
@@ -189,119 +190,17 @@ class ItoProcess
                 IntegrationOptions_.errorTerms + 1,
                 IntegrationOptions_.stepSize/10,
                 IntegrationOptions_.stepSize*10,
-                dt
+                dt,                
+                IntegrationOptions_.targetErrorDensity/100
             );
             dt = std::min(dt, tmax-t);
             double dW = W.GetValue(t+dt) - W.GetValue(t);
-            x = tdouble::Variable(x.GetValue() + a * dt + b * dW + b*bp*(dW*dW-dt));
+            x = tdouble::Variable(x.GetValue() + a * dt + b * dW + 0.5*b*bp*(dW*dW-dt));
             t += dt;
         }
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
     }
-    
-    /*double GetDt(){
-        if(IntegrationOptions_.integrationStyle == Fixed)
-            return IntegrationOptions_.stepSize;
-        
-        if(IntegrationOptions_.integrationStyle == Adaptive){
-            dt = find_root_bin_search(
-                [this](double dt){return sqrt(LocalMSEEstimate(dt))/dt - target_error_density;},
-                IntegrationOptions_.stepSize/10.,
-                IntegrationOptions_.stepSize*10.,
-                dt
-            );
-            return dt;
-        }
-        throw std::logic_error("AdaptivePredictive not implemented!");
-    }
-
-    double LocalMSEEstimate(double dt)
-    {
-        if(IntegrationOptions_.integrationStyle == Adaptive)
-        {
-            double mse = 0;
-            if(error_order >= 2 & IntegrationOptions_.integratorType == EulerMaruyama)
-                mse += coef11*coef11*dt*dt;
-            if(error_order >= 3 & IntegrationOptions_.integratorType != WagnerPlaten)
-                mse += (coef01*coef01+coef10*coef10+coef111*coef111)*dt*dt*dt;
-            if(error_order >= 4)
-                mse += coef00*coef00*dt*dt*dt*dt;  // TODO: address the fact that coef_<1x0, 2x1> should also be here!
-            
-            return mse;
-        }
-        throw std::logic_error("AdaptivePredictive not implemented!");
-    }
-
-    double GetDx(){
-        dx = 0;
-        dw = W.GetValue(t+dt) - W.GetValue(t);
-        dz = W.GetZ(t, t+dt);
-        
-        if(IntegrationOptions_.integratorType == EulerMaruyama)
-            dx += coef0*dt + coef1*dw;
-        if(IntegrationOptions_.integratorType == Milstein)
-            dx += coef11*(dw*dw-dt);
-        if(IntegrationOptions_.integratorType == WagnerPlaten)
-            dx += coef01*dz + coef10*(dw*dt-dz) + coef111*((1. / 3.) * dw * dw - dt) * dw;
-        
-        return dx;        
-    }
-
-    std::vector<PathPoint> SamplePathGeneral(double x0, double tmax){
-        double dx;        
-        
-        n_steps = 0;
-        t = 0;
-        x = tdouble::Variable(x0);        
-        std::vector<PathPoint> res;
-
-        while(t < tmax)
-        {
-            // Store most recent entry.
-            res.push_back(PathPoint(t,x.GetValue()));// Push value BEFORE each step to have initial value in response vector
-
-            // Evaluete coeficients
-            faval = fa(x);
-            fbval = fb(x);
-
-            a   = faval.GetValue();
-            ap  = faval.GetGradient();
-            app = faval.GetHessian();
-            b   = fbval.GetValue();
-            bp  = fbval.GetGradient();
-            bpp = fbval.GetHessian();
-
-            coef0   = a;
-            coef1   = b;
-            coef00  = a*ap + b*b*app/2.;
-            coef01  = b*ap;
-            coef10  = a*bp + b*b*bpp/2.;
-            coef11  = b*bp;
-            coef111 = b*(b*bpp + bp*bp);
-
-            // Determine dt
-            dt = GetDt();
-            dt = std::min(dt, tmax-t); // Don't go over tmax
-
-            // Update x
-            dx = GetDx();
-            x = tdouble::Variable(x.GetValue() + dx);
-
-            // Update t
-            n_steps++;
-            if(IntegrationOptions_.integrationStyle == Fixed)
-                t = n_steps*IntegrationOptions_.stepSize;
-            else
-                t += dt;
-        }
-
-        // Push final value
-        res.push_back(PathPoint(tmax,x.GetValue()));
-
-        return res;
-    }
-    */
 
   public:
     // Constructs Ito process out of two tdouble->tdouble functions.
@@ -337,6 +236,16 @@ class ItoProcess
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
         W = Wiener(ts.tv_nsec);
+    }
+    
+    void ResetRealization(int seed)
+    {
+        W = Wiener(seed);
+    }
+
+    double getW(double t)
+    {
+        return W.GetValue(t);
     }
 
     std::vector<PathPoint> SamplePath(double x0, double tmax)
