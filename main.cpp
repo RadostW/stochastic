@@ -36,13 +36,14 @@ double exact_solution(double x0, double w)
 
 int main()
 {
-    ItoProcess proc = ItoProcess(a_term, b_term);
+    auto eq = SinhEquation();
+    ItoProcess proc = ItoProcess(eq);
     double x0 = 0;
     double tmax = 400;
     
     auto opts = proc.GetIntegrationOptions();
     opts.stepSize = tmax/1000;
-    opts.targetErrorDensity = 0.002;
+    opts.targetMseDensity = 2.8e-6;
 
     double errEuler = 0;
     double errEulerAd1 = 0;

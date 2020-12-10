@@ -11,6 +11,7 @@
 #include "tdouble.cpp"
 #include "wiener.cpp"
 #include "utils.cpp"
+#include "equations.cpp"
 
 // Provides abstraction of an Ito Process,
 // See https://en.wikipedia.org/wiki/It%C3%B4_calculus#It%C3%B4_processes for details
@@ -28,7 +29,7 @@ class ItoProcess
         IntegrationStyle integrationStyle = Fixed;
         double stepSize = 0.01;
         int errorTerms = 1;
-        double targetErrorDensity = 1e-2;
+        double targetMseDensity = 1e-2;
     };
     struct PathPoint
     {
@@ -44,6 +45,7 @@ class ItoProcess
   private:
     // Function pointers defining SDE:
     // dX = fa(X) dt + fb(X) dW
+    StochasticDifferentialEquation *eq;
     tdouble (*fa)(tdouble);
     tdouble (*fb)(tdouble);
 
@@ -66,8 +68,8 @@ class ItoProcess
             double sbegin = step*i+tmin;
             double send = std::min(step*(i+1)+tmin,tmax);
             double dt = send-sbegin;
-            double a = fa(x).GetValue();
-            double b = fb(x).GetValue();
+            double a = eq->drift(x).GetValue();
+            double b = eq->volatility(x).GetValue();
             double dW = W.GetValue(send) - W.GetValue(sbegin);
             x = tdouble::Variable(x.GetValue() + a * dt + b * dW);
         }
@@ -88,10 +90,10 @@ class ItoProcess
 
         while(t < tmax)
         {
-            res.push_back(PathPoint(t, x.GetValue()));// Push value BEFORE each step to have initial value in response vector
+            res.push_back(PathPoint(t, x.GetValue())); // Push value BEFORE each step to have initial value in response vector
             
-            tdouble faval = fa(x);
-            tdouble fbval = fb(x); 
+            tdouble faval = eq->drift(x);
+            tdouble fbval = eq->volatility(x);
             
             double a   = faval.GetValue();
             double ap  = faval.GetGradient();
@@ -100,22 +102,23 @@ class ItoProcess
             double bp  = fbval.GetGradient();
             double bpp = fbval.GetHessian();
             
-            // E R^2/dt^2 = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
+            // E R^2/dt = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
             double mse_density_polynomial_coefs[] = {
+                0,
                 pow(b*bp, 2),
                 pow(b*ap, 2) + pow(a*bp + b*b*bpp/2., 2) + pow(b*(b*bpp + bp*bp), 2),
                 pow(a*ap + b*b*app/2., 2) + pow(b*(b*app + ap*bp), 2) // TODO: I_101 and I_110 should be here but require third derivative
             };
             
-            // Solving sqrt(E R^2/dt^2) = target_error_density
-            mse_density_polynomial_coefs[0] -= pow(IntegrationOptions_.targetErrorDensity, 2);
+            // Solving E R^2/dt = target_mse_density
+            mse_density_polynomial_coefs[0] -= IntegrationOptions_.targetMseDensity;
             dt = solve_increasing_poly(
                 mse_density_polynomial_coefs, 
-                IntegrationOptions_.errorTerms,
+                IntegrationOptions_.errorTerms + 1,
                 IntegrationOptions_.stepSize/10,
                 IntegrationOptions_.stepSize*10,
                 dt,
-                IntegrationOptions_.targetErrorDensity/100
+                IntegrationOptions_.targetMseDensity/100
             );
             dt = std::min(dt, tmax-t);
             double dW = W.GetValue(t+dt) - W.GetValue(t);
@@ -176,22 +179,23 @@ class ItoProcess
             double bp  = fbval.GetGradient();
             double bpp = fbval.GetHessian();
             
-            // E R^2/dt^2 = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
+            // E R^2/dt = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
             double mse_density_polynomial_coefs[] = {
+                0,
                 0,
                 pow(b*ap, 2) + pow(a*bp + b*b*bpp/2., 2) + pow(b*(b*bpp + bp*bp), 2),
                 pow(a*ap + b*b*app/2., 2) + pow(b*(b*app + ap*bp), 2) // TODO: I_101 and I_110 should be here but require third derivative
             };
             
-            // Solving sqrt(E R^2/dt^2) = target_error_density
-            mse_density_polynomial_coefs[0] -= pow(IntegrationOptions_.targetErrorDensity, 2);
+            // Solving E R^2/dt = target_mse_density
+            mse_density_polynomial_coefs[0] -= IntegrationOptions_.targetMseDensity;
             dt = solve_increasing_poly(
                 mse_density_polynomial_coefs, 
-                IntegrationOptions_.errorTerms + 1,
+                IntegrationOptions_.errorTerms + 2,
                 IntegrationOptions_.stepSize/10,
                 IntegrationOptions_.stepSize*10,
                 dt,                
-                IntegrationOptions_.targetErrorDensity/100
+                IntegrationOptions_.targetMseDensity/100
             );
             dt = std::min(dt, tmax-t);
             double dW = W.GetValue(t+dt) - W.GetValue(t);
@@ -218,6 +222,10 @@ class ItoProcess
         fb = volitality;
         W = Wiener();
         IntegrationOptions_ = integrationOptions;
+    }
+    ItoProcess(StochasticDifferentialEquation & eq_)
+    {
+        eq = & eq_;
     }
 
     IntegrationOptions GetIntegrationOptions()
