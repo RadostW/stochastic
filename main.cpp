@@ -43,9 +43,10 @@ int main()
     
     auto opts = proc.GetIntegrationOptions();
     opts.stepSize = tmax/1000;
-    opts.targetMseDensity = 2.8e-6;
+    opts.targetMseDensity = 5e-7;
 
     double errEuler = 0;
+    double errEulerAdPr = 0;
     double errEulerAd1 = 0;
     double errEulerAd2 = 0;
     double errEulerAd3 = 0;
@@ -53,12 +54,14 @@ int main()
     double errMilsteinAd1 = 0;
     double errMilsteinAd2 = 0;
     
+    double stepsEulerAdPr = 0;
     double stepsEulerAd1 = 0;
     double stepsEulerAd2 = 0;
     double stepsEulerAd3 = 0;
     double stepsMilsteinAd1 = 0;
     double stepsMilsteinAd2 = 0;
     
+    double meanDtEulerAdPr = 0;
     double meanDtEulerAd1 = 0;
     double meanDtEulerAd2 = 0;
     double meanDtEulerAd3 = 0;
@@ -82,6 +85,15 @@ int main()
         proc.SetIntegrationOptions(opts);
         double valMilstein = proc.SamplePath(x0, tmax).back().value;
 
+        // Adaptive predictive
+        opts.integrationStyle = IntegrationStyle::AdaptivePredictive;        
+        opts.integratorType = IntegratorType::EulerMaruyama;
+        proc.SetIntegrationOptions(opts);
+        auto traj = proc.SamplePath(x0, tmax);
+        double valEulerAdPr = traj.back().value;
+        meanDtEulerAdPr += tmax/(traj.size() - 1);
+
+
         // Adaptive
         opts.integrationStyle = IntegrationStyle::Adaptive;
         
@@ -89,7 +101,7 @@ int main()
 
         opts.errorTerms = 1;
         proc.SetIntegrationOptions(opts);
-        auto traj = proc.SamplePath(x0, tmax);
+        traj = proc.SamplePath(x0, tmax);
         double valEulerAd1 = traj.back().value;
         meanDtEulerAd1 += tmax/(traj.size() - 1);
 
@@ -120,6 +132,7 @@ int main()
         meanDtMilsteinAd2 += tmax/(traj.size() - 1);
         
         errEuler    += (valEuler-valExact)*(valEuler-valExact);
+        errEulerAdPr  += (valEulerAdPr-valExact)*(valEulerAdPr-valExact);
         errEulerAd1  += (valEulerAd1-valExact)*(valEulerAd1-valExact);
         errEulerAd2  += (valEulerAd2-valExact)*(valEulerAd2-valExact);
         errEulerAd3  += (valEulerAd3-valExact)*(valEulerAd3-valExact);
@@ -129,6 +142,7 @@ int main()
     }
     
     errEuler = sqrt(errEuler/n_proc);
+    errEulerAdPr = sqrt(errEulerAdPr/n_proc);
     errEulerAd1 = sqrt(errEulerAd1/n_proc);
     errEulerAd2 = sqrt(errEulerAd2/n_proc);
     errEulerAd3 = sqrt(errEulerAd3/n_proc);
@@ -136,6 +150,7 @@ int main()
     errMilsteinAd1 = sqrt(errMilsteinAd1/n_proc);
     errMilsteinAd2 = sqrt(errMilsteinAd2/n_proc);
 
+    meanDtEulerAdPr /= n_proc;
     meanDtEulerAd1 /= n_proc;
     meanDtEulerAd2 /= n_proc;
     meanDtEulerAd3 /= n_proc;
@@ -143,6 +158,7 @@ int main()
     meanDtMilsteinAd2 /= n_proc;
     
     printf("errEuler       %lf,      dt = %lf\n", errEuler, opts.stepSize);
+    printf("errEulerAdPr   %lf, mean dt = %lf\n", errEulerAdPr, meanDtEulerAdPr);
     printf("errEulerAd1    %lf, mean dt = %lf\n", errEulerAd1, meanDtEulerAd1);
     printf("errEulerAd2    %lf, mean dt = %lf\n", errEulerAd2, meanDtEulerAd2);
     printf("errEulerAd3    %lf, mean dt = %lf\n", errEulerAd3, meanDtEulerAd3);
