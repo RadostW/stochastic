@@ -33,15 +33,11 @@ int main()
 {
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
-    double x0 = 0;
-    double tmax = 400;
+    double x0 = 3;
+    double tmax = 5;
 
     auto opts = proc.GetIntegrationOptions();
-    opts.stepSize = tmax/1000;
-    opts.targetMseDensity = 5e-7;
-
-    double errEuler = 0;
-    double errMilstein = 0;
+    opts.stepSize = 0.01;
 
     int n_proc = 100;
     for(int i=0;i<n_proc;i++)
@@ -58,5 +54,7 @@ int main()
         opts.integratorType = IntegratorType::Milstein;
         proc.SetIntegrationOptions(opts);
         double valMilstein = proc.SamplePath(x0, tmax).back().value;
+
+        printf("%lf %lf\n", valEuler, valMilstein);
     }
 }
