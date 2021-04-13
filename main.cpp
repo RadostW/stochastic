@@ -35,8 +35,11 @@ int main(int argc, char* argv[])
     auto inputParser =  InputParser(argc, argv);
     int seed = 0;
     if(inputParser.cmdOptionExists("--seed"))
+    {
         sscanf(inputParser.getCmdOption("--seed").c_str(), "%d", &seed);
-    
+        srand(seed);
+        seed = rand();
+    }
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
     double x0 = 3;
@@ -45,7 +48,7 @@ int main(int argc, char* argv[])
     auto opts = proc.GetIntegrationOptions();
     opts.stepSize = 0.01;
 
-    int n_proc = 2000;
+    int n_proc = 20;
     for(int i=0;i<n_proc;i++)
     {
         proc.ResetRealization(seed + i);
