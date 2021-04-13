@@ -42,12 +42,10 @@ int main(int argc, char* argv[])
     }
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
-    double x0 = 3;
-    double tmax = 30;
+    double x0 = 1.5;
+    double tmax = 100;
 
-    auto opts = proc.GetIntegrationOptions();
-    opts.stepSize = 0.01;
-    auto stepSize = 0.01;
+    auto stepSize = 0.1;
 
     std::vector <ItoProcess::IntegrationOptions> optss = {
         //{IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize/100},
@@ -56,7 +54,7 @@ int main(int argc, char* argv[])
         {IntegratorType::EulerMaruyama,  IntegrationStyle::Adaptive, .stepSize=stepSize},
         {IntegratorType::Milstein,  IntegrationStyle::Adaptive, .stepSize=stepSize},
         {IntegratorType::EulerMirror1,  IntegrationStyle::Fixed, .stepSize=stepSize},
-    }; 
+    };
 
     int n_proc = 20;
     for(int i=0;i<n_proc;i++)
@@ -74,5 +72,5 @@ int main(int argc, char* argv[])
             printf("\n");
         }
         printf("\n");
-    }    
+    }
 }

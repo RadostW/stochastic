@@ -30,7 +30,7 @@ class SinhEquation : public ExactStochasticDifferentialEquation
     {
         if(x > 3)
             return -0.5*a*a*exp(-x+2/3)*sech(x);
-    
+
         else if(x < -3)
             return 0.5*a*a*exp(x+2/3)*sech(x);
         else
@@ -59,7 +59,7 @@ class WallEquation : public StochasticDifferentialEquation
         return 1.0/(h*h);
     }
 
-    double hmean=3;
+    double hmean=0.5;
 
     public:
 
