@@ -67,6 +67,13 @@ int main(int argc, char* argv[])
             if(inputParser.cmdOptionExists("--full_paths"))
                 for(auto const& datapoint: path)
                     printf("%lf %lf ", datapoint.time, datapoint.value);
+            else if(inputParser.cmdOptionExists("--resample"))
+            {
+                double dt;
+                sscanf(inputParser.getCmdOption("--resample").c_str(), "%lf", &dt);
+                for(double t = 0; t <= tmax; t+=dt)
+                    printf("%lf ", proc.GetItermediateValue(t));
+            }
             else
                 printf("%lf", path.back().value);
             printf("\n");
