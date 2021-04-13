@@ -54,7 +54,11 @@ int main()
         opts.integratorType = IntegratorType::Milstein;
         proc.SetIntegrationOptions(opts);
         double valMilstein = proc.SamplePath(x0, tmax).back().value;
+        
+        opts.integratorType = IntegratorType::EulerMirror1;
+        proc.SetIntegrationOptions(opts);
+        double valEulerMirror = proc.SamplePath(x0, tmax).back().value;
 
-        printf("%lf %lf\n", valEuler, valMilstein);
+        printf("%lf %lf %lf\n", valEuler, valMilstein, valEulerMirror);
     }
 }

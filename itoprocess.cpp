@@ -17,7 +17,7 @@
 // See https://en.wikipedia.org/wiki/It%C3%B4_calculus#It%C3%B4_processes for details
 // Allows for integration and sampling
 
-enum IntegratorType { EulerMaruyama, Milstein, WagnerPlaten };
+enum IntegratorType { EulerMaruyama, Milstein, WagnerPlaten, EulerMirror1 };
 enum IntegrationStyle { Fixed, Adaptive, AdaptivePredictive };
 
 class ItoProcess
@@ -70,6 +70,11 @@ class ItoProcess
             double b = eq->volatility(x).GetValue();
             double dW = W.GetValue(send) - W.GetValue(sbegin);
             x = tdouble::Variable(x.GetValue() + a * dt + b * dW);
+            if(IntegrationOptions_.integratorType == EulerMirror1 && x < 1)
+            {
+                x = (1-x) + 1;
+                //printf("reflection\n");
+            }
         }
         res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
         return res;
@@ -305,7 +310,7 @@ class ItoProcess
 
     std::vector<PathPoint> SamplePath(double x0, double tmax)
     {
-        if(IntegrationOptions_.integratorType == EulerMaruyama && 
+        if( (IntegrationOptions_.integratorType == EulerMaruyama || IntegrationOptions_.integratorType == EulerMirror1) && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleEulerMaruyama(x0,tmax);
         else if(IntegrationOptions_.integratorType == EulerMaruyama && 
             IntegrationOptions_.integrationStyle == Adaptive) return SampleEulerMaruyamaAdaptive(x0,tmax);
