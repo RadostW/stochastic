@@ -34,12 +34,12 @@ int main()
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
     double x0 = 3;
-    double tmax = 5;
+    double tmax = 30;
 
     auto opts = proc.GetIntegrationOptions();
     opts.stepSize = 0.01;
 
-    int n_proc = 100;
+    int n_proc = 2000;
     for(int i=0;i<n_proc;i++)
     {
         proc.ResetRealization(i);

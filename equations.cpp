@@ -65,7 +65,7 @@ class WallEquation : public StochasticDifferentialEquation
 
     tdouble drift(tdouble x)
     {
-         return 0.5*dmu(x) + 0.5*mu(x)*(1.0/hmean);
+         return 0.5*dmu(x) - 0.5*mu(x)*(1.0/hmean);
     }
     tdouble volatility(tdouble x)
     {
