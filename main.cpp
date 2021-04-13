@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     auto stepSize = 0.01;
 
     std::vector <ItoProcess::IntegrationOptions> optss = {
-        {IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize/100},
+        //{IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize/100},
         {IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize},
         {IntegratorType::Milstein,  IntegrationStyle::Fixed, .stepSize=stepSize},
         {IntegratorType::EulerMaruyama,  IntegrationStyle::Adaptive, .stepSize=stepSize},
@@ -66,9 +66,12 @@ int main(int argc, char* argv[])
         {
             proc.SetIntegrationOptions(opts);
             auto path = proc.SamplePath(x0, tmax);
-            for(auto const& datapoint: path)
-                printf("%lf %lf ", datapoint.time, datapoint.value);
-            printf("\n");   
+            if(inputParser.cmdOptionExists("--full_paths"))
+                for(auto const& datapoint: path)
+                    printf("%lf %lf ", datapoint.time, datapoint.value);
+            else
+                printf("%lf", path.back().value);
+            printf("\n");
         }
         printf("\n");
     }    
