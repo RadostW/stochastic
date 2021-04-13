@@ -315,5 +315,6 @@ class ItoProcess
             IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
             IntegrationOptions_.integrationStyle == Adaptive) return SampleMilsteinAdaptive(x0,tmax);
+        throw std::logic_error("Method not implemented");
     }
 };

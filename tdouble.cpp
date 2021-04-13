@@ -186,6 +186,7 @@ class tdouble
         s << (q.hes>=0?"+":"");
         s << q.hes;
         s << "dxx";
+        return s;
     }
     
 };
