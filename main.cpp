@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdio.h>
 #include "itoprocess.cpp"
+#include "argparser.cpp"
 
 // dh = a dt + b dW
 
@@ -29,36 +30,54 @@ tdouble b_term(tdouble x)
 // stochastic equation to be solved:
 // dX = a_term(x) dt + b_term(x) dW
 
-int main()
+int main(int argc, char* argv[])
 {
+    auto inputParser =  InputParser(argc, argv);
+    int seed = 0;
+    if(inputParser.cmdOptionExists("--seed"))
+    {
+        sscanf(inputParser.getCmdOption("--seed").c_str(), "%d", &seed);
+        srand(seed);
+        seed = rand();
+    }
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
-    double x0 = 3;
-    double tmax = 30;
+    double x0 = 1.5;
+    double tmax = 100;
 
-    auto opts = proc.GetIntegrationOptions();
-    opts.stepSize = 0.01;
+    auto stepSize = 0.1;
 
-    int n_proc = 2000;
+    std::vector <ItoProcess::IntegrationOptions> optss = {
+        //{IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize/100},
+        {IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize},
+        {IntegratorType::Milstein,  IntegrationStyle::Fixed, .stepSize=stepSize},
+        {IntegratorType::EulerMaruyama,  IntegrationStyle::Adaptive, .stepSize=stepSize},
+        {IntegratorType::Milstein,  IntegrationStyle::Adaptive, .stepSize=stepSize},
+        {IntegratorType::EulerMirror1,  IntegrationStyle::Fixed, .stepSize=stepSize},
+    };
+
+    int n_proc = 20;
     for(int i=0;i<n_proc;i++)
     {
-        proc.ResetRealization(i);
-
-        // Fixed
-        opts.integrationStyle = IntegrationStyle::Fixed;
-        opts.integratorType = IntegratorType::EulerMaruyama;
-
-        proc.SetIntegrationOptions(opts);
-        double valEuler = proc.SamplePath(x0, tmax).back().value;
-
-        opts.integratorType = IntegratorType::Milstein;
-        proc.SetIntegrationOptions(opts);
-        double valMilstein = proc.SamplePath(x0, tmax).back().value;
-        
-        opts.integratorType = IntegratorType::EulerMirror1;
-        proc.SetIntegrationOptions(opts);
-        double valEulerMirror = proc.SamplePath(x0, tmax).back().value;
-
-        printf("%lf %lf %lf\n", valEuler, valMilstein, valEulerMirror);
+        proc.ResetRealization(seed + i);
+        for(auto const& opts: optss)
+        {
+            proc.SetIntegrationOptions(opts);
+            auto path = proc.SamplePath(x0, tmax);
+            if(inputParser.cmdOptionExists("--full_paths"))
+                for(auto const& datapoint: path)
+                    printf("%lf %lf ", datapoint.time, datapoint.value);
+            else if(inputParser.cmdOptionExists("--resample"))
+            {
+                double dt;
+                sscanf(inputParser.getCmdOption("--resample").c_str(), "%lf", &dt);
+                for(double t = 0; t <= tmax; t+=dt)
+                    printf("%lf ", proc.GetItermediateValue(t));
+            }
+            else
+                printf("%lf", path.back().value);
+            printf("\n");
+        }
+        printf("\n");
     }
 }

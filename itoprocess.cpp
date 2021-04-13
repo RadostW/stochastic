@@ -29,7 +29,7 @@ class ItoProcess
         IntegrationStyle integrationStyle = Fixed;
         double stepSize = 0.01;
         int errorTerms = 1;
-        double targetMseDensity = 1e-2;
+        double targetMseDensity = 1e-4;
     };
     struct PathPoint
     {
@@ -52,6 +52,8 @@ class ItoProcess
 
     // Stores integration settings
     IntegrationOptions IntegrationOptions_;
+
+    std::map<double, double> path;
 
     std::vector<PathPoint> SampleEulerMaruyama(double x0, double tmax)
     {
@@ -310,16 +312,51 @@ class ItoProcess
 
     std::vector<PathPoint> SamplePath(double x0, double tmax)
     {
+        std::vector<PathPoint> result;
         if( (IntegrationOptions_.integratorType == EulerMaruyama || IntegrationOptions_.integratorType == EulerMirror1) && 
-            IntegrationOptions_.integrationStyle == Fixed) return SampleEulerMaruyama(x0,tmax);
+            IntegrationOptions_.integrationStyle == Fixed) result = SampleEulerMaruyama(x0,tmax);
         else if(IntegrationOptions_.integratorType == EulerMaruyama && 
-            IntegrationOptions_.integrationStyle == Adaptive) return SampleEulerMaruyamaAdaptive(x0,tmax);
+            IntegrationOptions_.integrationStyle == Adaptive) result = SampleEulerMaruyamaAdaptive(x0,tmax);
         else if(IntegrationOptions_.integratorType == EulerMaruyama && 
-            IntegrationOptions_.integrationStyle == AdaptivePredictive) return SampleEulerMaruyamaPredictive(x0,tmax);
+            IntegrationOptions_.integrationStyle == AdaptivePredictive) result = SampleEulerMaruyamaPredictive(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
-            IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
+            IntegrationOptions_.integrationStyle == Fixed) result = SampleMilstein(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
-            IntegrationOptions_.integrationStyle == Adaptive) return SampleMilsteinAdaptive(x0,tmax);
-        throw std::logic_error("Method not implemented");
+            IntegrationOptions_.integrationStyle == Adaptive) result = SampleMilsteinAdaptive(x0,tmax);
+        else
+            throw std::logic_error("Method not implemented");
+
+        path.clear();
+        for(auto const& pathPoint: result)
+            path[pathPoint.time] = pathPoint.value;
+
+        return result;
+    }
+
+    double GetItermediateValue(double t)
+    {
+        auto lower = path.lower_bound(t);
+        if (t < 0 || lower == path.end())  // Beyond known values.
+        {
+            throw std::logic_error("beyond sampled points");
+        }
+        if (lower->first == t) return path[t];  // Exact match.
+        else  // Between known values
+        {
+            double nextT = lower->first;
+            double prevT = (--lower)->first;
+            double prevW = W.GetValue(prevT);
+            double nextW = W.GetValue(nextT);
+            double prevX = path[prevT];
+            double nextX = path[nextT];
+
+            double prevB = eq->volatility(prevX).GetValue();
+            double nextB = eq->volatility(nextX).GetValue();
+
+            double b = ((t-prevT)*prevB + (nextT-t)*nextB)/(nextT-prevT); // mean in square space?
+
+            path[t] = (path[prevT]*(nextT-t) + path[nextT]*(t-prevT))/(nextT - prevT) + b*((W.GetValue(t)-W.GetValue(prevT))*(nextT-t) + (W.GetValue(t) - W.GetValue(nextT))*(t-prevT))/(nextT - prevT);
+            return path[t];
+        }
     }
 };
