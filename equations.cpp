@@ -45,3 +45,30 @@ class SinhEquation : public ExactStochasticDifferentialEquation
         return asinh(a*w + sinh(x0)); 
     }
 };
+
+class WallEquation : public StochasticDifferentialEquation
+{
+    private:
+
+    tdouble mu(tdouble h) // make sure mu->1 as h->inf
+    {
+        return 1.0-(1.0/h);
+    }
+    tdouble dmu(tdouble h)
+    {
+        return 1.0/(h*h);
+    }
+
+    double hmean=3;
+
+    public:
+
+    tdouble drift(tdouble x)
+    {
+         return 0.5*dmu(x) + 0.5*mu(x)*(1.0/hmean);
+    }
+    tdouble volatility(tdouble x)
+    {
+        return sqrt(mu(x));
+    }
+};

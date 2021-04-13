@@ -31,7 +31,7 @@ tdouble b_term(tdouble x)
 
 int main()
 {
-    auto eq = SinhEquation();
+    auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
     double x0 = 0;
     double tmax = 400;
