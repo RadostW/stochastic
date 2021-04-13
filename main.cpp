@@ -68,6 +68,16 @@ int main(int argc, char* argv[])
         proc.SetIntegrationOptions(opts);
         double valEulerMirror = proc.SamplePath(x0, tmax).back().value;
 
-        printf("%lf %lf %lf\n", valEuler, valMilstein, valEulerMirror);
+        opts.integrationStyle = IntegrationStyle::Adaptive;
+        opts.integratorType = IntegratorType::EulerMaruyama;
+
+        proc.SetIntegrationOptions(opts);
+        double valEulerAdaptive = proc.SamplePath(x0, tmax).back().value;
+
+        opts.integratorType = IntegratorType::Milstein;
+        proc.SetIntegrationOptions(opts);
+        double valMilsteinAdaptive = proc.SamplePath(x0, tmax).back().value;
+        
+        printf("%lf %lf %lf %lf %lf\n", valEuler, valMilstein, valEulerMirror, valEulerAdaptive, valMilsteinAdaptive);
     }
 }
