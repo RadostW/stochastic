@@ -204,6 +204,11 @@ tdouble operator*(const double& lhs, const tdouble& rhs)
     return rhs*lhs;
 }
 
+tdouble operator/(const double& lhs, const tdouble& rhs)
+{
+    return lhs*(rhs.Inverse());
+}
+
 
 // Common functions
 tdouble cos(tdouble x)
