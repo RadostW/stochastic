@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdio.h>
 #include "itoprocess.cpp"
+#include "argparser.cpp"
 
 // dh = a dt + b dW
 
@@ -29,8 +30,13 @@ tdouble b_term(tdouble x)
 // stochastic equation to be solved:
 // dX = a_term(x) dt + b_term(x) dW
 
-int main()
+int main(int argc, char* argv[])
 {
+    auto inputParser =  InputParser(argc, argv);
+    int seed = 0;
+    if(inputParser.cmdOptionExists("--seed"))
+        sscanf(inputParser.getCmdOption("--seed").c_str(), "%d", &seed);
+    
     auto eq = WallEquation();
     ItoProcess proc = ItoProcess(eq);
     double x0 = 3;
@@ -42,7 +48,7 @@ int main()
     int n_proc = 2000;
     for(int i=0;i<n_proc;i++)
     {
-        proc.ResetRealization(i);
+        proc.ResetRealization(seed + i);
 
         // Fixed
         opts.integrationStyle = IntegrationStyle::Fixed;
