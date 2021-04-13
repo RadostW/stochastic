@@ -43,7 +43,7 @@ double solve_increasing_poly(double* coefs, int order, double x_min, double x_ma
 
     x = (x_min + x_max) / 2;
     n_iters += 1;
-    if (n_iters > 30)
+    if (n_iters > 100)
       throw std::logic_error("solve_increasing_poly infinite loop");
   }
 }

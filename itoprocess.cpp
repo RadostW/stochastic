@@ -46,8 +46,6 @@ class ItoProcess
     // Function pointers defining SDE:
     // dX = fa(X) dt + fb(X) dW
     StochasticDifferentialEquation *eq;
-    tdouble (*fa)(tdouble);
-    tdouble (*fb)(tdouble);
 
     // Underlying random process.
     Wiener W;
@@ -129,6 +127,61 @@ class ItoProcess
         return res;
     }
 
+    std::vector<PathPoint> SampleEulerMaruyamaPredictive(double x0, double tmax)
+    {
+        tdouble x = tdouble::Variable(x0);
+        std::vector<PathPoint> res;
+        double dt = IntegrationOptions_.stepSize;
+        double tmin = 0;
+        double t = tmin;
+
+        int steps = 0;
+        while(t < tmax)
+        {
+            res.push_back(PathPoint(t, x.GetValue())); // Push value BEFORE each step to have initial value in response vector
+            
+            tdouble faval = eq->drift(x);
+            tdouble fbval = eq->volatility(x);
+            
+            double a   = faval.GetValue();
+            double ap  = faval.GetGradient();
+            double app = faval.GetHessian();
+            double b   = fbval.GetValue();
+            double bp  = fbval.GetGradient();
+            double bpp = fbval.GetHessian();
+
+            double peek_dt = IntegrationOptions_.stepSize*10;
+            double peek_t = t + peek_dt;
+            double peek_dw = W.GetValue(peek_t) - W.GetValue(t);
+            double peek_dz = W.GetZ(t, peek_t);
+
+            // E R^2/dt | W(t+peek_dt) = mse_density_polynomial_coefs[0] + mse_density_polynomial_coefs[1]*dt + ...
+            double mse_density_polynomial_coefs[] = {
+                0,
+                pow((0.5*b*bp), 2)*2,
+                pow((0.5*b*bp), 2)*4*(peek_dw*peek_dw-peek_dt)/(peek_dt*peek_dt),
+                pow((0.5*b*bp), 2)*(3*peek_dt*peek_dt - 6*peek_dt*peek_dw*peek_dw + pow(peek_dw, 4))/pow(peek_dt, 4)
+            };
+            
+            // Solving E R^2/dt = target_mse_density
+            mse_density_polynomial_coefs[0] -= IntegrationOptions_.targetMseDensity;
+            dt = solve_increasing_poly(
+                mse_density_polynomial_coefs, 
+                3,
+                IntegrationOptions_.stepSize/10,
+                IntegrationOptions_.stepSize*10,
+                dt,
+                IntegrationOptions_.targetMseDensity*1e-4
+            );
+            dt = std::min(dt, tmax-t);
+            double dW = W.GetValue(t+dt) - W.GetValue(t);
+            x = tdouble::Variable(x.GetValue() + a * dt + b * dW);
+            t += dt;
+        }
+        res.push_back(PathPoint(tmax,x.GetValue())); //Push final value
+        return res;
+    }
+
     std::vector<PathPoint> SampleMilstein(double x0, double tmax)
     {
         tdouble x = tdouble::Variable(x0);
@@ -143,8 +196,8 @@ class ItoProcess
             double sbegin = tmin + step*i;
             double send = std::min(tmin + step*(i+1),tmax);
             double dt = send-sbegin;            
-            double a = fa(x).GetValue();
-            tdouble fbval = fb(x);
+            double a = eq->drift(x).GetValue();
+            tdouble fbval = eq->volatility(x);
             double b = fbval.GetValue();
             double bp = fbval.GetGradient();
             double dW = W.GetValue(send) - W.GetValue(sbegin);
@@ -169,8 +222,8 @@ class ItoProcess
         {
             res.push_back(PathPoint(t, x.GetValue()));// Push value BEFORE each step to have initial value in response vector
             
-            tdouble faval = fa(x);
-            tdouble fbval = fb(x); 
+            tdouble faval = eq->drift(x);
+            tdouble fbval = eq->volatility(x); 
             
             double a   = faval.GetValue();
             double ap  = faval.GetGradient();
@@ -210,21 +263,15 @@ class ItoProcess
     // Constructs Ito process out of two tdouble->tdouble functions.
     // Consistent with definition:
     // dX = drift(X) dt + volitality(X) dW
-    ItoProcess(tdouble drift(tdouble), tdouble volitality(tdouble))
+    ItoProcess(StochasticDifferentialEquation & eq_, IntegrationOptions integrationOptions)
     {
-        fa = drift;
-        fb = volitality;
         W = Wiener();
-    }
-    ItoProcess(tdouble drift(tdouble), tdouble volitality(tdouble),IntegrationOptions integrationOptions)
-    {
-        fa = drift;
-        fb = volitality;
-        W = Wiener();
+        eq = & eq_;
         IntegrationOptions_ = integrationOptions;
     }
     ItoProcess(StochasticDifferentialEquation & eq_)
     {
+        W = Wiener();
         eq = & eq_;
     }
 
@@ -262,6 +309,8 @@ class ItoProcess
             IntegrationOptions_.integrationStyle == Fixed) return SampleEulerMaruyama(x0,tmax);
         else if(IntegrationOptions_.integratorType == EulerMaruyama && 
             IntegrationOptions_.integrationStyle == Adaptive) return SampleEulerMaruyamaAdaptive(x0,tmax);
+        else if(IntegrationOptions_.integratorType == EulerMaruyama && 
+            IntegrationOptions_.integrationStyle == AdaptivePredictive) return SampleEulerMaruyamaPredictive(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
             IntegrationOptions_.integrationStyle == Fixed) return SampleMilstein(x0,tmax);
         else if(IntegrationOptions_.integratorType == Milstein && 
