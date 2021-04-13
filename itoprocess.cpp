@@ -29,7 +29,7 @@ class ItoProcess
         IntegrationStyle integrationStyle = Fixed;
         double stepSize = 0.01;
         int errorTerms = 1;
-        double targetMseDensity = 1e-2;
+        double targetMseDensity = 1e-4;
     };
     struct PathPoint
     {

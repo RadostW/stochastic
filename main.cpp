@@ -47,37 +47,29 @@ int main(int argc, char* argv[])
 
     auto opts = proc.GetIntegrationOptions();
     opts.stepSize = 0.01;
+    auto stepSize = 0.01;
+
+    std::vector <ItoProcess::IntegrationOptions> optss = {
+        {IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize/100},
+        {IntegratorType::EulerMaruyama,  IntegrationStyle::Fixed, .stepSize=stepSize},
+        {IntegratorType::Milstein,  IntegrationStyle::Fixed, .stepSize=stepSize},
+        {IntegratorType::EulerMaruyama,  IntegrationStyle::Adaptive, .stepSize=stepSize},
+        {IntegratorType::Milstein,  IntegrationStyle::Adaptive, .stepSize=stepSize},
+        {IntegratorType::EulerMirror1,  IntegrationStyle::Fixed, .stepSize=stepSize},
+    }; 
 
     int n_proc = 20;
     for(int i=0;i<n_proc;i++)
     {
         proc.ResetRealization(seed + i);
-
-        // Fixed
-        opts.integrationStyle = IntegrationStyle::Fixed;
-        opts.integratorType = IntegratorType::EulerMaruyama;
-
-        proc.SetIntegrationOptions(opts);
-        double valEuler = proc.SamplePath(x0, tmax).back().value;
-
-        opts.integratorType = IntegratorType::Milstein;
-        proc.SetIntegrationOptions(opts);
-        double valMilstein = proc.SamplePath(x0, tmax).back().value;
-        
-        opts.integratorType = IntegratorType::EulerMirror1;
-        proc.SetIntegrationOptions(opts);
-        double valEulerMirror = proc.SamplePath(x0, tmax).back().value;
-
-        opts.integrationStyle = IntegrationStyle::Adaptive;
-        opts.integratorType = IntegratorType::EulerMaruyama;
-
-        proc.SetIntegrationOptions(opts);
-        double valEulerAdaptive = proc.SamplePath(x0, tmax).back().value;
-
-        opts.integratorType = IntegratorType::Milstein;
-        proc.SetIntegrationOptions(opts);
-        double valMilsteinAdaptive = proc.SamplePath(x0, tmax).back().value;
-        
-        printf("%lf %lf %lf %lf %lf\n", valEuler, valMilstein, valEulerMirror, valEulerAdaptive, valMilsteinAdaptive);
-    }
+        for(auto const& opts: optss)
+        {
+            proc.SetIntegrationOptions(opts);
+            auto path = proc.SamplePath(x0, tmax);
+            for(auto const& datapoint: path)
+                printf("%lf %lf ", datapoint.time, datapoint.value);
+            printf("\n");   
+        }
+        printf("\n");
+    }    
 }
