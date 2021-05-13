@@ -7,6 +7,7 @@ todo
   - configure testing framework
   - configure debugging framework
   - interface for sampling multiple trajectories
+  - speed optimization
 - paper
   - neat tables with schemes, coef. functions, integral covariances, optimal dt formulas
   - comparison of 1 dim euler/milstein fixed/adaptive

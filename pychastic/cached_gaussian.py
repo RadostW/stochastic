@@ -1,7 +1,7 @@
 import numpy as np
 
 def normal(seed=None):
-  if seed:
+  if seed is not None:
     np.random.seed(seed)
   size = 1
   samples = []

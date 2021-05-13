@@ -4,15 +4,16 @@ import numpy as np
 
 
 class Wiener:
-    def __init__(self):
+    def __init__(self, seed=0):
         self.sample_points = sortedcontainers.SortedDict()
         self.sample_points[0.] = {
             'w': 0.0,
             #'zToPrevPoint': 0.0
         }
-        self.normal_generator = normal()
+        self.normal_generator = normal(seed=seed)
     
     def get_w(self, t):
+        t = float(t)
         if t < 0:
             return ValueError
         

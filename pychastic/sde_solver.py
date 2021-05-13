@@ -10,11 +10,10 @@ class SDESolver:
         self.adaptive = False
         self.scheme = 'euler'  # euler | milstein
         self.dt = 0.01
-        self.min_dt = self.dt/10
-        self.max_dt = self.dt*10
+        self.dt_adapting_factor = 10
         self.seed = None
         self.error_terms = 1
-        self.target_mse_density = 0.1
+        self.target_mse_density = 1e-3
 
     def get_step_function(self, problem):
       if self.scheme == 'euler':
@@ -72,6 +71,8 @@ class SDESolver:
         step = self.get_step_function(problem)
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
+          min_dt = self.dt/self.dt_adapting_factor
+          max_dt = self.dt*self.dt_adapting_factor
         
         # initialize values
         dt = self.dt
@@ -89,8 +90,11 @@ class SDESolver:
             # adapt step
             if self.adaptive:
               dt = optimal_dt(x)
-              dt = max(dt, self.min_dt)
-              dt = min(dt, self.max_dt)
+              dt = max(dt, min_dt)
+              dt = min(dt, max_dt)
+
+            if t + dt > problem.tmax:
+              dt = problem.tmax - t
 
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
@@ -104,10 +108,12 @@ class SDESolver:
 
             if t >= problem.tmax:
               break
-        print((time.time()-t0)*1000)
+        main_loop_time_ms = (time.time()-t0)*1000
+
         return dict(
             time_values=np.array(time_values),
             solution_values=np.array(solution_values),
             wiener_values=np.array(wiener_values),
+            main_loop_time_ms = main_loop_time_ms
         )
 
