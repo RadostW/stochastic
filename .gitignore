@@ -1,6 +1,14 @@
 .*
 venv
-**/__pychache__
+*.pyc
 
-./stoch_env
-./stoch_env/*
+stoch_env
+stoch_env/*
+
+bin/
+build/
+dist/
+lib64
+pyvenv.cfg
+
+*.egg-info

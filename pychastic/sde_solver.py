@@ -1,8 +1,8 @@
 import jax
 import time
 import numpy as np
-from .random import normal
-from .sde_problem import SDEProblem
+from pychastic.cached_gaussian import normal
+from pychastic.sde_problem import SDEProblem
 
 
 class SDESolver:

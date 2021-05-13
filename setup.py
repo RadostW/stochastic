@@ -12,5 +12,5 @@ setup(name='Pychastic',
       long_description=long_description,
       long_description_content_type='text/markdown',  # This is important!
       license='MIT',
-      packages=['paczka'],
+      packages=['pychastic'],
       zip_safe=False)
