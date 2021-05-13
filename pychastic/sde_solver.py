@@ -1,7 +1,6 @@
 import jax
 import time
 import numpy as np
-from pychastic.cached_gaussian import normal
 from pychastic.sde_problem import SDEProblem
 from pychastic.wiener import Wiener
 
