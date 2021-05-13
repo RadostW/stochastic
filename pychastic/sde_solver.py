@@ -1,9 +1,10 @@
 import jax
 import time
 import numpy as np
-from .random_ import normal
-from .sde_problem import SDEProblem
-from paczka.wiener import Wiener
+from pychastic.cached_gaussian import normal
+from pychastic.sde_problem import SDEProblem
+from pychastic.wiener import Wiener
+
 
 class SDESolver:
     def __init__(self):

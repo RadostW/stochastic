@@ -2,3 +2,14 @@
 venv
 *.pyc
 .png
+
+stoch_env
+stoch_env/*
+
+bin/
+build/
+dist/
+lib64
+pyvenv.cfg
+
+*.egg-info

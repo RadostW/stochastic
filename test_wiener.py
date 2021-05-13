@@ -1,4 +1,4 @@
-from paczka.wiener import Wiener
+from pychastic.wiener import Wiener
 import random
 import numpy as np
 

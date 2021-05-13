@@ -1,11 +1,16 @@
 from setuptools import setup
 
-setup(name='funniest',
-      version='0.1',
-      description='The funniest joke in the world',
-      url='http://github.com/storborg/funniest',
-      author='Flying Circus',
-      author_email='flyingcircus@example.com',
+with open('README.md') as f:
+    long_description = f.read()
+
+setup(name='Pychastic',
+      version='0.1.2',
+      description='Solvers for stochastic differential equations',
+      url='https://github.com/RadostW/stochastic',
+      author='Radost Waszkiewicz & Maciej Bartczak',
+      author_email='radost.waszkiewicz@gmail.com',
+      long_description=long_description,
+      long_description_content_type='text/markdown',  # This is important!
       license='MIT',
-      packages=['funniest'],
+      packages=['pychastic'],
       zip_safe=False)

@@ -1,5 +1,5 @@
 import sortedcontainers
-from .random_ import normal
+from pychastic.cached_gaussian import normal
 import numpy as np
 
 

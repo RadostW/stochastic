@@ -1,5 +1,5 @@
-from paczka.problems.kp_4_27 import KloedenPlaten4_27
-from paczka.sde_solver import SDESolver
+from pychastic.problems.kp_4_27 import KloedenPlaten4_27
+from pychastic.sde_solver import SDESolver
 
 problem = KloedenPlaten4_27
 solver = SDESolver()
