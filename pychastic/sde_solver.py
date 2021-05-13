@@ -7,7 +7,7 @@ from pychastic.wiener import Wiener
 
 class SDESolver:
     '''
-    Produces realisations of stochastic process given in constructor. 
+    Produces realisations of stochastic process to ``solve`` method.
     Controls numerical integration features via attributes.
 
     Parameters
