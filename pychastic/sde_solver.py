@@ -6,6 +6,28 @@ from pychastic.wiener import Wiener
 
 
 class SDESolver:
+    '''
+    Produces realisations of stochastic process given in constructor. 
+    Controls numerical integration features via attributes.
+
+    Parameters
+    ----------
+    adaptive : {true, false}, default: True
+         Whether to take fixed-size steps or not.
+    scheme : {'euler','milstein'}, default: 'euler'
+         Type of scheme used for integration.
+    dt : float
+         Step size in fixed-step integration.
+    min_dt : float
+         Minimal value of time step in variable step integrators.
+    max_dt : float
+         Maximal value of time step in variable step integrators.
+    error_terms : int, default: 1
+         Number of error terms used for stepsize estimation.
+    target_mse_density : float
+         Target mean square error density used in variable step integrators.
+
+    '''
     def __init__(self):
         self.adaptive = False
         self.scheme = 'euler'  # euler | milstein
@@ -68,6 +90,32 @@ class SDESolver:
       return optimal_dt        
     
     def solve(self, problem: SDEProblem, wiener: Wiener = None):
+        '''
+        Produce one realisation of the process specified by ``problem``.
+
+        Parameters
+        ----------
+        problem : SDEProblem
+             Stochastic differential equation together with bounary conditions.
+        wiener : Wiener, optional
+             Underlying Wiener process supplying noise to the equation. Usefull when comparing several solvers or several equations on the same noise.
+
+        Returns
+        -------
+        dict
+            Dictionary containing 3 entries. Under key ``time_values`` a np.array of timestamps on which process was evaluated.
+            Under key ``solution_values`` a np.array of stochastic process values at corresponding time instances.
+            Under key ``wiener_values`` np.array of values of the underlying Wiener process realisation at coresponding time instances.
+
+        Example
+        -------
+        >>> problem = pychastic.sde_problem.SDEProblem(lambda x: 1.0,lambda x: -1.0,0.0,0.1)
+        >>> solver = pychastic.sde_solver.SDESolver()
+        >>> solver.solve(problem)
+        {'time_values': array([0.,0.01,...]), 'solution_values' : array([0.,0.0082,...]),'wiener_values' : array([0.,-0.0017,...])} #some values random
+
+
+        '''
         wiener = wiener or Wiener()
         step = self.get_step_function(problem)
         if self.adaptive:
@@ -110,4 +158,5 @@ class SDESolver:
             solution_values=np.array(solution_values),
             wiener_values=np.array(wiener_values),
         )
+
 

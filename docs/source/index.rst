@@ -1,17 +1,20 @@
-Pychastic 0.1 documentation
-=======================================================
+Pychastic 0.1 Manual
+====================
 
-.. automodule:: pychastic.sde_problem
-   :members:
-.. automodule:: pychastic.sde_solver
-   :members:
+aaaaa
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   
+   Getting started <begginer>
+   Examples <examples>
+   User manual <reference>
 
-Indices and tables
-==================
+   
+
+
+Search tools
+============
 
 * :ref:`genindex`
 * :ref:`modindex`

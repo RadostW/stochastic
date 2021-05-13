@@ -2,11 +2,9 @@ import jax
 
 class SDEProblem:
   '''
-
   Stores a stochastic differential equation of the form:
-  dX = a(X) dt + b(x) dW
-
-  ...
+  :math:`dX = a(X) dt + b(x) dW`, where ``a`` and ``b`` are
+  (possibly positionally dependent) drift and noise coefficients.
 
   Parameters
   ----------

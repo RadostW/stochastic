@@ -33,7 +33,9 @@ release = '0.1.2'
 extensions = [
 'sphinx.ext.autodoc',
 'sphinx.ext.coverage',
-'sphinx.ext.napoleon'
+'sphinx.ext.napoleon',
+'sphinx_copybutton',
+'sphinx-prompt'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -51,8 +53,6 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 
-# html_theme = 'alabaster'
-
 html_theme = "pydata_sphinx_theme"
 
 
@@ -61,3 +61,10 @@ html_theme = "pydata_sphinx_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# -- Copybuttion option -----------------------------------------------------
+
+# Removes annoying >>> with a button
+
+copybutton_prompt_text = ">>> "
