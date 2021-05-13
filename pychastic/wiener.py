@@ -4,6 +4,9 @@ import numpy as np
 
 
 class Wiener:
+    '''
+    Class for sampling, and memorization of Wiener process and basic Stochastic integrals
+    '''
     def __init__(self):
         self.sample_points = sortedcontainers.SortedDict()
         self.sample_points[0.] = {
