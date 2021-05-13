@@ -1,7 +1,7 @@
 from paczka.problems.kp_4_27 import KloedenPlaten4_27
 from paczka.sde_solver import SDESolver
 
-problem = KloedenPlaten4_27()
+problem = KloedenPlaten4_27
 solver = SDESolver()
 solver.dt = 0.01
 solution = solver.solve(problem)
@@ -13,7 +13,9 @@ plt.plot(solution['time_values'], solution['solution_values'], marker='x', label
 plt.plot(solution['time_values'], exact, label='true')
 plt.legend()
 plt.savefig('sol.png')
+plt.close()
 
 plt.plot(solution['time_values'], solution['solution_values']-exact)
 plt.title('Error')
 plt.savefig('error.png')
+plt.close()
