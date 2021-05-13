@@ -1,8 +1,13 @@
 todo
-- wiener
-- compile `step` and `optimal_dt` only once
-- neat tables
-- misc
+- code
+  - higher order integrals in wiener instance
+  - tests for subsampling
+  - configure testing framework
+  - configure debugging framework
+  - interface for sampling multiple trajectories
+- paper
+  - neat tables with schemes, coef. functions, integral covariances, optimal dt formulas 
+- package
   - configure `setup.py`
   - decide on name
   - licence

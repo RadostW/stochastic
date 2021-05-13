@@ -84,6 +84,7 @@ class SDESolver:
         solution_values = [x]
         wiener_values = [0.0]
                 
+        t0 = time.time()
         while True:
             # adapt step
             if self.adaptive:
@@ -103,7 +104,6 @@ class SDESolver:
 
             if t >= problem.tmax:
               break
-            t0 = time.time()
         print((time.time()-t0)*1000)
         return dict(
             time_values=np.array(time_values),
