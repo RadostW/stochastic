@@ -1,3 +1,4 @@
 jax==0.2.13
-numpy==1.20.3
+jaxlib==0.1.66
 matplotlib==3.4.2
+numpy==1.20.3
