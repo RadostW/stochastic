@@ -3,6 +3,7 @@ import time
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 from pychastic.wiener import Wiener
+from pychastic.wiener import WienerWithZ
 
 
 class SDESolver:
@@ -45,6 +46,19 @@ class SDESolver:
       elif self.scheme == 'milstein':
           def step(x, dt, dw):
               return x + problem.a(x)*dt + problem.b(x)*dw + 0.5*problem.b(x)*problem.bp(x)*(dw**2 - dt)
+      elif self.scheme == 'wagner_platen':
+          #Kloden-Platen 10.4.1 -- The order 1.5 Strong Taylor Scheme
+          def step(x, dt, dw, dz):
+              return (
+                    x 
+                  + problem.a(x)*dt + problem.b(x)*dw
+                  + 0.5*problem.b(x)*problem.bp(x)*(dw**2 - dt)
+                  + problem.ap(x)*problem.b(x)*dz
+                  + 0.5*(problem.a(x)*problem.ap(x) + 0.5*problem.b(x)**2*problem.app(x))*dt**2
+                  + (problem.a(x)*problem.bp(x)+0.5*problem.b(x)**2*problem.bpp(x))*(dw*dt-dz)
+                  + 0.5*problem.b(x)*(problem.b(x)*problem.bpp(x)+(problem.bp(x))**2)*(1.0/3.0*dw**2-dt)*dw
+                  )
+
       else:
         raise KeyError('wrong scheme')
 
@@ -116,7 +130,11 @@ class SDESolver:
 
 
         '''
-        wiener = wiener or Wiener()
+        if self.scheme == 'wagner_platen':
+            wiener = wiener or WienerWithZ()
+        else:
+            wiener = wiener or Wiener()
+
         step = self.get_step_function(problem)
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
@@ -143,7 +161,11 @@ class SDESolver:
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
             w += dw
-            x = step(x, dt, dw)
+            if self.scheme == 'wagner_platen':
+                dz = wiener.get_z(t,t+dt)
+                x = step(x, dt, dw)
+            else:
+                x = step(x, dt, dw)
 
             # update "trajectories"
             solution_values.append(x)            
