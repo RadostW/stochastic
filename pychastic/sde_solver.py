@@ -163,7 +163,7 @@ class SDESolver:
             w += dw
             if self.scheme == 'wagner_platen':
                 dz = wiener.get_z(t,t+dt)
-                x = step(x, dt, dw)
+                x = step(x, dt, dw, dz)
             else:
                 x = step(x, dt, dw)
 
@@ -174,7 +174,7 @@ class SDESolver:
 
             if t >= problem.tmax:
               break
-        print((time.time()-t0)*1000)
+        #print((time.time()-t0)*1000)
         return dict(
             time_values=np.array(time_values),
             solution_values=np.array(solution_values),
