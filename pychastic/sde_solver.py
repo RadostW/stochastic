@@ -211,7 +211,7 @@ class VectorSDESolver:
                 return x + problem.a(x)*dt + np.dot(problem.b(x),dw)
         elif self.scheme == 'commutative_milstein':
             def step(x, dt, dw, comm_noise):
-                raise NotImplementedError
+                return x + problem.a(x)*dt + np.dot(problem.b(x),dw) + np.tensordot( problem.bp(x) , comm_noise )
         elif self.scheme == 'milstein':
             def step(x, dt, dw, double_integrals):
                 raise NotImplementedError
@@ -251,7 +251,7 @@ class VectorSDESolver:
         if self.scheme == 'euler':
             wiener = wiener or VectorWiener(problem.noiseterms)
         elif self.scheme == 'commutative_milstein':
-            raise NotImplementedError
+            wiener = wiener or VectorWiener(problem.noiseterms)
         elif self.scheme == 'milstein':
             raise NotImplementedError
         else:
@@ -276,6 +276,8 @@ class VectorSDESolver:
             if self.scheme == 'euler':
                 x = step(x, dt, dw)
             elif self.scheme == 'commutative_milstein':
+                comm_noise = wiener.get_commuting_noise(t,t+dt)
+                x = step(x, dt, dw, comm_noise)
                 raise NotImplementedError
             elif self.scheme == 'milstein':
                 raise NotImplementedError

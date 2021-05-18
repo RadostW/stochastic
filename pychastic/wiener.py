@@ -289,7 +289,70 @@ class VectorWiener:
             raise NotImplementedError
 
         return self.sample_points[t]['w']
-    def get_commuting_noise_component(self,t1,t2,j,k):
+    def get_commuting_noise(self, t1, t2, j, k):
+        '''
+        Get value of commutative noise matrix (compare Kloden-Platen (10.3.15))
+
+        Define :math:`I_{jk}` as
+
+        .. math :: I_{jk}(t_1,t_2) = \int_{t_1}^{t_2} \int_{t_1}^{s_1} dW_j(s_2) dW_k(s_1)
+
+        Then for :math:`j \\neq k`
+
+        .. math :: I_{jk} + I_{kj} = \Delta W_j \Delta W_k
+
+        Parameters
+        ----------
+        t1 : float
+            Lower bound of double stochastic integrals
+        t2 : float
+            Upper bound of double stochastic integrals
+
+        Returns
+        -------
+        np.array
+            Symmetric square matrix `noiseterms` by `noiseterms` containing :math:`I_{jk}` as components.
+
+        '''
+
+        if t1 < 0 or t2 < 0:
+            raise ValueError
+
+        if t1 > t2:
+            raise ValueError
+
+        if (t1 in self.sample_points) and (t2 in self.sample_points):
+            dW = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+            dV = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+
+            prod = np.outer(dW,dV)
+            halfdiag = np.oneslike(prod) - 0.5*np.identity(self.dimension)
+
+            return prod*halfdiag - (t2-t1)*np.identity(self.dimension)
+
+
+        t_max = self.sample_points.keys()[-1]
+        if t1 > t_max:
+            nvec = [next(self.normal_generator) for x in range(0,self.dimension)]
+            self.sample_points[t1] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t1-t_max)*nvec}
+        elif t1 not in self.sample_points:
+            raise NotImplementedError
+
+        if t2 > t_max:
+            nvec = [next(self.normal_generator) for x in range(0,self.dimension)]
+            self.sample_points[t2] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t2-t_max)*nvec}
+        elif t2 not in self.sample_points:
+            raise NotImplementedError
+
+        dW = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+        dV = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+
+        prod = np.outer(dW,dV)
+        halfdiag = np.oneslike(prod) - 0.5*np.identity(self.dimension)
+
+        return prod*halfdiag - (t2-t1)*np.identity(self.dimension)
+
+    def get_commuting_noise_component(self, t1, t2, j, k):
         '''
         Get value of commutative noise component (compare Kloden-Platen (10.3.15)).
 

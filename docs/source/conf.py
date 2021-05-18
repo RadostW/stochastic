@@ -55,6 +55,13 @@ exclude_patterns = []
 
 html_theme = "pydata_sphinx_theme"
 
+html_sidebars = {
+   'begginer': [],  # Hide sidebar
+   'optionpricing': [],  # Hide sidebar
+   'moleculardynamics': [],  # Hide sidebar
+   'examples': [],  # Hide sidebar
+}
+
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
