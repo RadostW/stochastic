@@ -278,7 +278,6 @@ class VectorSDESolver:
             elif self.scheme == 'commutative_milstein':
                 comm_noise = wiener.get_commuting_noise(t,t+dt)
                 x = step(x, dt, dw, comm_noise)
-                raise NotImplementedError
             elif self.scheme == 'milstein':
                 raise NotImplementedError
 
