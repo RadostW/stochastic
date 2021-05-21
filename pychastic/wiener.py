@@ -38,8 +38,8 @@ class Wiener:
 
 
         '''
-        if t < 0:
-            return ValueError
+        if not t >= 0:
+            raise ValueError('Illegal (negative?) timestamp')
 
         if t in self.sample_points:
             return self.sample_points[t]['w']
@@ -231,8 +231,8 @@ class VectorWiener:
     Class for sampling, and memorization of vector valued Wiener process.
 
 
-    Paramteters
-    -----------
+    Parameters
+    ----------
     dimension : int
         Dimensionality of the vector process (i.e. number of independent Wiener processes).
 
@@ -274,7 +274,7 @@ class VectorWiener:
 
         '''
         if t < 0:
-            return ValueError
+            raise ValueError('Negative timestamp')
 
         if t in self.sample_points:
             return self.sample_points[t]['w']
