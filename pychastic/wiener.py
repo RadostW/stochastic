@@ -135,22 +135,20 @@ class WienerWithZ:
         self.ensure_sample_point(t1)
         self.ensure_sample_point(t2)
 
-        first_i = self.sample_points.bisect_left(t1) - 1
-        last_i = self.sample_points.bisect_left(t2)
-        
-        retZ = 0;
-        for i in range(first_i,last_i):
-            prev_t = self.sample_points.peekitem(i)[0]
-            next_t = self.sample_points.peekitem(i+1)[0]
+        Z = 0
+        w1 = self.sample_points[t1]['w']
+        it_lower = self.sample_points.irange(t1, t2)
+        it_upper = self.sample_points.irange(t1, t2)
+        next(it_upper)
+        for t_upper in it_upper:
+            t_lower = next(it_lower)
+            Z += self.sample_points[t_upper]['zToPrevPoint']
+            dt = t_upper-t_lower
+            dw = self.sample_points[t_lower]['w'] - w1
+            Z += dw*dt
 
-            prev_w = self.sample_points.peekitem(i)[1]['w']
-            next_w = self.sample_points.peekitem(i+1)[1]['w']
+        return Z
 
-            dt = next_t - prev_t
-            dw = next_w - prev_w
-            retZ = retZ + self.sample_points.peekitem(i+1)[1]['zToPrevPoint'] + dt*dw
-
-        return retZ
 
     def ensure_sample_point(self,t):
         '''
@@ -204,7 +202,7 @@ class WienerWithZ:
             wt2 = prev_w + wt1t2
 
             #Break Z integration interval into two segments
-            self.sample_points.peekitem(next_i)[1]['zToPrevPoint'] = (
+            self.sample_points[next_t]['zToPrevPoint'] = (
                       self.sample_points.peekitem(next_i)[1]['zToPrevPoint']
                       - zt1t2
                       - (next_t-t)*(wt2-prev_w))
