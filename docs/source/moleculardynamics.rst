@@ -119,7 +119,7 @@ timestep decreases drastically, we're able to compute this trajectory in
 acceptable time without giving solver explicit information about domain of the 
 equation thanks to adaptive timestepping -- nice!
 
-.. image:: zoomin_close.pdf
+.. image:: zoomin_close.png
 
 Generating many trajectories
 ''''''''''''''''''''''''''''
@@ -146,7 +146,33 @@ functions, but this ideally happens only once).
   >>> plt.histogram(trajectories['solution_values'][:,-1])
   >>> plt.show()
 
+More degrees of freedom
+'''''''''''''''''''''''
+
+All of the above is neat but it's been well understood for a couple of decades 
+now. Most likely you'd want to simulate many particles or at least one particle
+that can roate and move in all three dimensions.
+
+Unless you're really lucky and the problem separates into separate equations for
+each of the directions you'll need to integrate all degrees of freedom 
+simulataneously. It can be acomplished using vector SDEs.
+
 Simulating vector SDEs
 ''''''''''''''''''''''
 
-##### TODO #####
+##### TODO ###### 2 spheres with hydrodynamic interaction
+
+.. prompt:: python >>> auto
+
+  >>> import pychastic
+  >>> theta = 0.1; omega = 0.05; xi = 0.1; mu = 0.01
+  >>> problem = pychastic.sde_problem.VectorSDEProblem(
+        lambda x: [mu, theta*(omega - x[1])],
+        lambda x: [[np.sqrt(x[1])*x[0],0],[0,xi * x[1]]],
+        [100.0,0.05],
+        dimension = 2,
+        noiseterms = 2,
+        t_max = 2.0
+        )
+  >>> solver = pychastic.sde_solver.VectorSDESolver()
+  >>> trajectory = solver.solve(problem)

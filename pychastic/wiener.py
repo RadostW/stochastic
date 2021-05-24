@@ -233,7 +233,7 @@ class VectorWiener:
 
     Parameters
     ----------
-    dimension : int
+    noiseterms : int
         Dimensionality of the vector process (i.e. number of independent Wiener processes).
 
     Example
@@ -243,11 +243,11 @@ class VectorWiener:
     array([0.21,-0.31]) # random, independent from N(0,1)
 
     '''
-    def __init__(self,dimension : int):
+    def __init__(self,noiseterms : int):
         self.sample_points = sortedcontainers.SortedDict()
-        self.dimension = dimension
+        self.noiseterms = noiseterms
         self.sample_points[0.] = {
-            'w': np.array([0.0 for x in range(0,dimension)]),
+            'w': np.array([0.0 for x in range(0,noiseterms)]),
         }
         self.normal_generator = normal()
 
@@ -281,7 +281,7 @@ class VectorWiener:
 
         t_max = self.sample_points.keys()[-1]
         if t > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.dimension)])
+            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
             self.sample_points[t] = {'w': np.array(self.sample_points[t_max]['w'] + np.sqrt(t-t_max)*nvec)}
         else:
             #print(f'Called with t {t}, current t_max is {t_max}')
@@ -326,21 +326,21 @@ class VectorWiener:
             dV = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
 
             prod = np.outer(dW,dV)
-            #halfdiag = np.oneslike(prod) - 0.5*np.identity(self.dimension)
+            #halfdiag = np.oneslike(prod) - 0.5*np.identity(self.noiseterms)
 
-            #return prod*halfdiag - (t2-t1)*np.identity(self.dimension)
+            #return prod*halfdiag - (t2-t1)*np.identity(self.noiseterms)
             return 0.5*prod
 
 
         t_max = self.sample_points.keys()[-1]
         if t1 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.dimension)])
+            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
             self.sample_points[t1] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t1-t_max)*nvec}
         elif t1 not in self.sample_points:
             raise NotImplementedError
 
         if t2 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.dimension)])
+            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
             self.sample_points[t2] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t2-t_max)*nvec}
         elif t2 not in self.sample_points:
             raise NotImplementedError
@@ -349,9 +349,9 @@ class VectorWiener:
         dV = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
 
         prod = np.outer(dW,dV)
-        #halfdiag = np.oneslike(prod) - 0.5*np.identity(self.dimension)
+        #halfdiag = np.oneslike(prod) - 0.5*np.identity(self.noiseterms)
 
-        #return prod*halfdiag - (t2-t1)*np.identity(self.dimension)
+        #return prod*halfdiag - (t2-t1)*np.identity(self.noiseterms)
         return 0.5*prod
 
     def get_commuting_noise_component(self, t1, t2, j, k):
@@ -401,13 +401,13 @@ class VectorWiener:
 
         t_max = self.sample_points.keys()[-1]
         if t1 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.dimension)])
+            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
             self.sample_points[t1] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t1-t_max)*nvec}
         elif t1 not in self.sample_points:
             raise NotImplementedError
 
         if t2 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.dimension)])
+            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
             self.sample_points[t2] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t2-t_max)*nvec}
         elif t2 not in self.sample_points:
             raise NotImplementedError
@@ -419,5 +419,176 @@ class VectorWiener:
             return dW*dV
         else:
             return 0.5*(dW*dW - (t2-t1))
+
+
+class VectorWienerWithI:
+    '''
+    Class for sampling, and memorization of vector valued Wiener process including first
+    nontrivial vector stochastic integral :math:`I_{jk}`.
+
+
+    Parameters
+    ----------
+    noiseterms : int
+        Dimensionality of the vector process (i.e. number of independent Wiener processes).
+    p : int, default: 10
+        Number of terms in fourier expansion of the stochastic integral. 
+        The higher the number, the more precise approximation becomes.
+
+    Example
+    -------
+    >>> vw = pychastic.wiener.VectorWienerWithJ(2)
+    >>> vw.get_w(1)
+    array([0.21,-0.31]) # random, independent from N(0,1)
+
+    '''
+    def __init__(self,noiseterms : int, p = 10 : int):
+        self.sample_points = sortedcontainers.SortedDict()
+        self.noiseterms = noiseterms
+        self.sample_points[0.] = {
+            'w': np.zeros(noiseterms),
+            'IToPrevPoint' : np.zeros((noiseterms,noiseterms))
+        }
+        self.normal_generator = normal()
+        self.p = p
+
+    def get_w(self, t):
+        '''
+        Get value of Wiener probess at specified timestamp.
+
+        Parameters
+        ----------
+        t: float
+            Time at which the process should be sampled. Has to be non-negative.
+
+        Returns
+        -------
+        np.array
+            Value of Wiener processes at time ``t``.
+
+        Example
+        -------
+        >>> vw = VectorWienerWithI(2)
+        >>> dW = vw.get_w(1.0) - vw.get_w(0.0)
+        >>> dW
+        array([0.321,-0.123]) #random, each from N(0,1)
+
+        '''
+        if t < 0:
+            raise ValueError('Negative timestamp')
+
+        if t in self.sample_points:
+            return self.sample_points[t]['w']
+
+        t_max = self.sample_points.keys()[-1]
+        if t > t_max:
+            self.ensure_sample_point(t)
+        else:
+            raise NotImplementedError
+
+        return self.sample_points[t]['w']
+
+    def get_I_matrix(self, t1, t2):
+        '''
+        Get value of double integrals :math:`I_{jk}` (compare Kloden-Platen (10.3.5))
+
+        Define :math:`I_{jk}` as
+
+        .. math :: I_{jk}(t_1,t_2) = \int_{t_1}^{t_2} \int_{t_1}^{s_1} dW_j(s_2) dW_k(s_1)
+
+        Parameters
+        ----------
+        t1 : float
+            Lower bound of double stochastic integrals
+        t2 : float
+            Upper bound of double stochastic integrals
+
+        Returns
+        -------
+        np.array
+            Symmetric square matrix `noiseterms` by `noiseterms` containing :math:`I_{jk}` approximants as components.
+
+        '''
+
+        if not (t1 >= 0 and t2 >= 0):
+            raise ValueError('Illegal timestamps for sampling. (Negative?)')
+
+        if t1 > t2:
+            raise ValueError('Wrong order of integration limits.')
+
+        t_max = self.sample_points.keys()[-1]
+        if t1 > t_max:
+            self.ensure_sample_point(t1)
+        elif t1 not in self.sample_points:
+            raise NotImplementedError('Conditional subsampling not implemented.')
+
+        if t2 > t_max:
+            self.ensure_sample_point(t2)
+        elif t2 not in self.sample_points:
+            raise NotImplementedError('Conditional subsampling not implemented.')
+
+        # Recall: I(1->3)  = I(1->2) + I(2->3) + dWa(2->3) dWb(1->2)
+
+        first_i = self.sample_points.bisect_left(t1) - 1
+        last_i = self.sample_points.bisect_left(t2)
+        
+        retI = np.zeros((self.noiseterms,self.noiseterms))
+
+        for i in range(first_i,last_i):
+            prev_t = self.sample_points.peekitem(i)[0]
+            next_t = self.sample_points.peekitem(i+1)[0]
+
+            prev_w = self.sample_points.peekitem(i)[1]['w']
+            next_w = self.sample_points.peekitem(i+1)[1]['w']
+
+            dt = next_t - prev_t
+            dw = next_w - prev_w
+            retI = retI + self.sample_points.peekitem(i+1)[1]['IToPrevPoint'] + np.outer(dwa,dwb)
+
+        return retZ
+
+    def ensure_sample_point(self,t):
+        '''
+        Checks if sample point exists, adds new sample if necessary
+
+        Parameters
+        ----------
+        t : float
+            Timestamp to potentially add to sample history
+
+        '''
+
+        if not (t>=0):
+            raise ValueError('Illegal timestamps for sampling. (Negative?)')
+        if t in self.sample_points:
+            return
+
+        t_max = self.sample_points.keys()[-1]
+
+        # ##### TODO ###### change implemntation to use cached normals
+        # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
+        Delta = t - t_max
+
+        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+
+        xi = 1.0 / np.sqrt(Delta) * dW
+        mu = np.random.normal(size=noiseterms)
+        eta = np.random.normal(size=(noiseterms,self.p))
+        zeta = np.random.normal(size=(noiseterms,self.p))
+        rec = np.array([1.0/x for x in range(1,p+1)]) # 1/r vector
+        rho = 1.0/12.0 - 1.0 / math.sqrt(2.0 * math.pi) sum([1.0/(x**2) for x in range(1,p+1)])
+
+        Imat = (
+                Delta*( 0.5*np.outer(xi,xi) + np.sqrt(rho) ( np.outer(mu,xi) - np.outer(xi,mu) ) )
+                + Delta / (2*math.pi) * np.sum( rec * (
+                                                         np.outer(zeta , (math.sqrt(2)*xi + eta))
+                                                       - np.outer((math.sqrt(2)*xi + eta), zeta)  
+                                                      ) , axis = 0)
+               )
+
+        np.fill_diagonal(Imat, 0.5 (dW**2 - Delta)) # Diagonal entries work differently
+
+        self.sample_points[t] = {'w': self.sample_points[t_max]['w'] + dW, 'IToPrevPoint' : Imat}
+
 
 
