@@ -2,6 +2,7 @@ from numpy.core.fromnumeric import transpose
 import sortedcontainers
 from pychastic.cached_gaussian import normal
 import numpy as np
+import jax.numpy as jnp
 import math
 
 class Wiener:
@@ -483,7 +484,16 @@ class VectorWienerWithI:
         if t > t_max:
             self.ensure_sample_point(t)
         else:
-            raise NotImplementedError
+            next_i = self.sample_points.bisect_left(t)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t < 2*jnp.finfo(type(t)).eps ):
+                return self.sample_points[next_t]['w']
+            elif ( t - prev_t < 2*jnp.finfo(type(t)).eps ):
+                return self.sample_points[prev_t]['w']
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
+                # #### TODO #### Implement subsampling
 
         return self.sample_points[t]['w']
 
@@ -519,12 +529,28 @@ class VectorWienerWithI:
         if t1 > t_max:
             self.ensure_sample_point(t1)
         elif t1 not in self.sample_points:
-            raise NotImplementedError('Conditional subsampling not implemented.')
+            next_i = self.sample_points.bisect_left(t1)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t1 < 2*jnp.finfo(type(t1)).eps ):
+                t1 = next_t
+            elif ( t1 - prev_t < 2*jnp.finfo(type(t1)).eps ):
+                t1 = prev_t
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
 
         if t2 > t_max:
             self.ensure_sample_point(t2)
         elif t2 not in self.sample_points:
-            raise NotImplementedError('Conditional subsampling not implemented.')
+            next_i = self.sample_points.bisect_left(t2)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t2 < 2*jnp.finfo(type(t2)).eps ):
+                t2 = next_t
+            elif ( t2 - prev_t < 2*jnp.finfo(type(t2)).eps ):
+                t2 = prev_t
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
 
         # Recall: I(1->3)  = I(1->2) + I(2->3) + dWa(2->3) dWb(1->2)
 

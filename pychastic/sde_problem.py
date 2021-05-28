@@ -1,5 +1,6 @@
 import jax
 import numpy as np
+import jax.numpy as jnp
 
 class SDEProblem:
   '''
@@ -86,12 +87,16 @@ class VectorSDEProblem:
     tmpa = a(x0)
     tmpb = b(x0)
 
-    assert isinstance(tmpa, np.ndarray) , 'Drift term should return np.array'
-    assert np.issubdtype(tmpa.dtype, np.floating) , f'Drift term should be array of floats, not {tmpa.dtype}.'
+    assert isinstance(x0, jnp.ndarray) , 'Initial condition should return jnp.array'
+    assert jnp.issubdtype(x0.dtype, jnp.floating) , f'Initial condition should be array of floats, not {x0.dtype}.'
+    assert x0.shape == (dimension,) , f'Initial condition should be array of shape (dimension,) == {(self.dimension,)}, not {x0.shape}'
+
+    assert isinstance(tmpa, jnp.ndarray) , 'Drift term should return jnp.array'
+    assert jnp.issubdtype(tmpa.dtype, jnp.floating) , f'Drift term should be array of floats, not {tmpa.dtype}.'
     assert tmpa.shape == (dimension,) , f'Drift term should be array of shape (dimension,) == {(self.dimension,)}, not {tmpa.shape}'
 
-    assert isinstance(tmpb, np.ndarray) , 'Noise term should return np.array'
-    assert np.issubdtype(tmpb.dtype, np.floating) , f'Noise term should be array of floats, not {tmpb.dtype}.'
+    assert isinstance(tmpb, jnp.ndarray) , 'Noise term should return jnp.array'
+    assert jnp.issubdtype(tmpb.dtype, jnp.floating) , f'Noise term should be array of floats, not {tmpb.dtype}.'
     assert tmpb.shape == (dimension,noiseterms) , f'Noise term should be array of shape (dimension, noiseterms) == {(self.dimension,self.noiseterms)}, not {tmpb.shape}'
     
 
