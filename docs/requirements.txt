@@ -8,11 +8,15 @@ sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-napoleon==0.7
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
+
+jax==0.2.13
+jaxlib==0.1.66
+matplotlib==3.4.2
 numpy==1.20.3
-scipy==1.5.4
-#PyGRPY==0.0.2
+sortedcontainers==2.3.0
 
 docutils==0.16
+
 #Copied from the web
 #alabaster==0.7.9
 #Babel==2.3.4
