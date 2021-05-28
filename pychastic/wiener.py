@@ -440,7 +440,7 @@ class VectorWienerWithI:
     array([0.21,-0.31]) # random, independent from N(0,1)
 
     '''
-    def __init__(self,noiseterms : int, p = 10 : int):
+    def __init__(self,noiseterms : int, p = 10):
         self.sample_points = sortedcontainers.SortedDict()
         self.noiseterms = noiseterms
         self.sample_points[0.] = {
@@ -574,7 +574,7 @@ class VectorWienerWithI:
         eta = np.random.normal(size=(noiseterms,self.p))
         zeta = np.random.normal(size=(noiseterms,self.p))
         rec = np.array([1.0/x for x in range(1,p+1)]) # 1/r vector
-        rho = 1.0/12.0 - 1.0 / math.sqrt(2.0 * math.pi) sum([1.0/(x**2) for x in range(1,p+1)])
+        rho = 1.0/12.0 - 1.0 / math.sqrt(2.0 * math.pi) * sum([1.0/(x**2) for x in range(1,p+1)])
 
         Imat = (
                 Delta*( 0.5*np.outer(xi,xi) + np.sqrt(rho) ( np.outer(mu,xi) - np.outer(xi,mu) ) )
