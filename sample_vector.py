@@ -18,36 +18,16 @@ problem = pychastic.sde_problem.VectorSDEProblem(
     dimension = 3,
     noiseterms = 2,
     x0 = jnp.array([1.5, 0.5,1.1]),
-    tmax = 50,
+    tmax = 1,
 )
-
-w = pychastic.wiener.VectorWienerWithI(2)
-variant_a = []
-t0 = 0
-while t0 < problem.tmax:
-    t0 += 0.01
-    variant_a.append(t0)
-t0 = 0
-while t0 < problem.tmax:
-    t0 += 0.1
-    variant_a.append(t0)
-
-for t in sorted(variant_a):
-    w.get_w(t)
 
 solver = pychastic.sde_solver.VectorSDESolver()
 solver.scheme = "euler"
+solver.adaptive = True
 solver.dt = 0.01
-eul_better_sol = solver.solve(problem,w)
+solver.target_mse_density = 1
+eul_sol = solver.solve(problem)
 
-solver.dt = 0.1
-solver.scheme = "milstein"
-mil_sol = solver.solve(problem,w)
-solver.scheme = "euler"
-eul_sol = solver.solve(problem,w)
-
-plt.plot(mil_sol['time_values'],mil_sol['solution_values'][:,0],label='milstein')
-plt.plot(eul_sol['time_values'],eul_sol['solution_values'][:,0],label='euler')
-plt.plot(eul_better_sol['time_values'],eul_better_sol['solution_values'][:,0],label='euler_x10')
+plt.plot(eul_sol['time_values'],eul_sol['solution_values'][:,0],label='euler', marker='x')
 plt.legend()
-plt.show()
+plt.savefig('muldim_adaptuve.png')

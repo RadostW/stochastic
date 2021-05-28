@@ -247,7 +247,10 @@ class VectorSDESolver:
         if self.scheme == 'euler':
             if self.error_terms == 1:
                 def optimal_dt(x):
-                    return
+                    return 2*self.target_mse_density/((problem.bp(x) @ problem.b(x))**2).sum()
+                
+        optimal_dt = jax.jit(optimal_dt)
+        return optimal_dt
                     
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
