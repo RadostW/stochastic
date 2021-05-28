@@ -202,5 +202,19 @@ class TestWienerWithZ(unittest.TestCase):
                msg = f'Autocovariance of Wiener increments incorrect: {cov}')
 
 
+    def test_vector_double_integrals(self):
+        w = VectorWiener(noiseterms=2)
+        T = 100
+        points = list(range(T))
+        for t in points:
+            w.get_w(float(t))
+
+        dw_list = []
+        for t in range(T):
+            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+        dw_list = np.array(dw_list)
+
+        
+
 if __name__ == '__main__':
     unittest.main()
