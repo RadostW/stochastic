@@ -92,7 +92,7 @@ class VectorSDEProblem:
 
     assert isinstance(tmpb, np.ndarray) , 'Noise term should return np.array'
     assert np.issubdtype(tmpb.dtype, np.floating) , f'Noise term should be array of floats, not {tmpb.dtype}.'
-    assert tmpb.shape == (dimension,noiseterms) , f'Drift term should be array of shape (dimension, noiseterms) == {(self.dimension,self.noiseterms)}, not {tmpb.shape}'
+    assert tmpb.shape == (dimension,noiseterms) , f'Noise term should be array of shape (dimension, noiseterms) == {(self.dimension,self.noiseterms)}, not {tmpb.shape}'
     
 
     self.ap = jax.jacfwd(a)

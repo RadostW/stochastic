@@ -1,5 +1,6 @@
 import jax
 import time
+#import jax.numpy as np
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
