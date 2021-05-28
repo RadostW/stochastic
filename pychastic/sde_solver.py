@@ -1,6 +1,6 @@
 import jax
 import time
-#import jax.numpy as np
+import jax.numpy as jnp
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
@@ -232,14 +232,14 @@ class VectorSDESolver:
     def get_step_function(self, problem):
         if self.scheme == 'euler':
             def step(x, dt, dw):
-                return x + problem.a(x)*dt + np.dot(problem.b(x),dw)
+                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw)
         elif self.scheme in ['milstein', 'commutative_milstein']:
             def step(x, dt, dw, i):
-                return x + problem.a(x)*dt + np.dot(problem.b(x),dw) + np.tensordot( problem.bp(x) , i )
+                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw) + jnp.tensordot( problem.bp(x) @ problem.b(x) , i.T )
         else:
             raise KeyError('Unknown scheme name')
 
-        #jax.jit(step) # ####### TODO #########
+        step = jax.jit(step)
 
         return step
 
@@ -265,13 +265,13 @@ class VectorSDESolver:
         Returns
         -------
         dict
-            Dictionary containing 2 entries. Under key ``time_values`` a np.array of timestamps on which process was evaluated.
-            Under key ``solution_values`` a np.array of stochastic process values at corresponding time instances.
+            Dictionary containing 2 entries. Under key ``time_values`` a jnp.array of timestamps on which process was evaluated.
+            Under key ``solution_values`` a jnp.array of stochastic process values at corresponding time instances.
 
         Example
         -------
-        >>> import numpy as np
-        >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: np.array([1,1]), lambda x: np.array([[1,0.5],[0.5,1]]), 2, 2, np.array([1.5,0.5]), 1)
+        >>> import jax.numpy as jnp
+        >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: jnp.array([1,1]), lambda x: jnp.array([[1,0.5],[0.5,1]]), 2, 2, jnp.array([1.5,0.5]), 1)
         >>> solver = pychastic.sde_solver.VectorSDESolver()
         >>> solver.solve(problem)
         {'time_values': array([0.,0.01,...]), 'solution_values' : array([[1.5, 0.5], [1.76, 0.71], [1.93, 0.91], ...])} #some values random
@@ -325,6 +325,6 @@ class VectorSDESolver:
                 break
 
         return dict(
-            time_values=np.array(time_values),
-            solution_values=np.array(solution_values)
+            time_values=jnp.array(time_values),
+            solution_values=jnp.array(solution_values)
         )
