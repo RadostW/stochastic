@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import transpose
 import sortedcontainers
 from pychastic.cached_gaussian import normal
 import numpy as np
@@ -567,24 +568,22 @@ class VectorWienerWithI:
         # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
         Delta = t - t_max
 
-        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0, self.noiseterms)])
+        xi = (1.0 / np.sqrt(Delta) * dW).reshape(1, -1)
+        mu = np.random.normal(size=self.noiseterms).reshape(1, -1)
+        eta = np.random.normal(size=(self.p, self.noiseterms))
+        zeta = np.random.normal(size=(self.p, self.noiseterms))
+        rec = 1/np.arange(1, self.p+1) # 1/r vector
+        rho = 1/12 - (rec**2).sum()/(2*np.pi**2)
 
-        xi = 1.0 / np.sqrt(Delta) * dW
-        mu = np.random.normal(size=noiseterms)
-        eta = np.random.normal(size=(noiseterms,self.p))
-        zeta = np.random.normal(size=(noiseterms,self.p))
-        rec = np.array([1.0/x for x in range(1,p+1)]) # 1/r vector
-        rho = 1.0/12.0 - 1.0 / math.sqrt(2.0 * math.pi) * sum([1.0/(x**2) for x in range(1,p+1)])
+        a = math.sqrt(2)*xi+eta
 
         Imat = (
-                Delta*( 0.5*np.outer(xi,xi) + np.sqrt(rho) ( np.outer(mu,xi) - np.outer(xi,mu) ) )
-                + Delta / (2*math.pi) * np.sum( rec * (
-                                                         np.outer(zeta , (math.sqrt(2)*xi + eta))
-                                                       - np.outer((math.sqrt(2)*xi + eta), zeta)  
-                                                      ) , axis = 0)
-               )
-
-        np.fill_diagonal(Imat, 0.5 (dW**2 - Delta)) # Diagonal entries work differently
+            Delta*(xi*xi.T + np.sqrt(rho)*(mu*xi.T - xi*mu.T))
+            + Delta/(2*np.pi)*  ((np.expand_dims(a, 1)*np.expand_dims(zeta, 2) - np.expand_dims(a, 2)*np.expand_dims(zeta, 1)).T*rec).sum(axis=-1)
+        )
+        
+        np.fill_diagonal(Imat, 0.5*(dW**2 - Delta)) # Diagonal entries work differently
 
         self.sample_points[t] = {'w': self.sample_points[t_max]['w'] + dW, 'IToPrevPoint' : Imat}
 

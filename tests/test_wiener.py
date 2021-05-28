@@ -3,6 +3,7 @@ from sortedcontainers.sorteddict import SortedDict
 
 from pychastic.wiener import Wiener
 from pychastic.wiener import WienerWithZ
+from pychastic.wiener import VectorWienerWithI
 
 import random
 import numpy as np
@@ -249,7 +250,18 @@ class TestWienerWithZ(unittest.TestCase):
             dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
         dw_list = np.array(dw_list)
 
+class TestVectorWienerWithI(unittest.TestCase):
+    def testIMoments(self):
+        w = VectorWienerWithI(noiseterms=2)
+        T = 100
+        points = list(range(T))
+        #random.shuffle(points)
+        for t in points:
+            w.get_w(t)
         
+        data = np.stack([w.get_I_matrix(points[i], points[i+1]) for i in range(len(points)-1)])
+        print(data.shape)
+
 
 if __name__ == '__main__':
     #np.random.seed(0)
