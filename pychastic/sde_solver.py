@@ -3,7 +3,7 @@ import time
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
-from pychastic.wiener import Wiener
+from pychastic.wiener import VectorWienerWithI, Wiener
 from pychastic.wiener import WienerWithZ
 from pychastic.wiener import VectorWiener
 
@@ -220,12 +220,9 @@ class VectorSDESolver:
         if self.scheme == 'euler':
             def step(x, dt, dw):
                 return x + problem.a(x)*dt + np.dot(problem.b(x),dw)
-        elif self.scheme == 'commutative_milstein':
-            def step(x, dt, dw, comm_noise):
-                return x + problem.a(x)*dt + np.dot(problem.b(x),dw) + np.tensordot( problem.bp(x) , comm_noise )
-        elif self.scheme == 'milstein':
-            def step(x, dt, dw, double_integrals):
-                raise NotImplementedError
+        elif self.scheme in ['milstein', 'commutative_milstein']:
+            def step(x, dt, dw, i):
+                return x + problem.a(x)*dt + np.dot(problem.b(x),dw) + np.tensordot( problem.bp(x) , i )
         else:
             raise KeyError('Unknown scheme name')
 
@@ -264,7 +261,7 @@ class VectorSDESolver:
         elif self.scheme == 'commutative_milstein':
             wiener = wiener or VectorWiener(problem.noiseterms)
         elif self.scheme == 'milstein':
-            raise NotImplementedError
+            wiener = wiener or VectorWienerWithI(problem.noiseterms)
         else:
             raise KeyError('Unknown scheme name: '+str(self.scheme))
 
@@ -290,7 +287,8 @@ class VectorSDESolver:
                 comm_noise = wiener.get_commuting_noise(t,t+dt)
                 x = step(x, dt, dw, comm_noise)
             elif self.scheme == 'milstein':
-                raise NotImplementedError
+                i = wiener.get_I_matrix(t, t+dt)
+                x = step(x, dt, dw, i)
 
             solution_values.append(x)
             time_values.append(t)

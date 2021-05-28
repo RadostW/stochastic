@@ -253,14 +253,33 @@ class TestWienerWithZ(unittest.TestCase):
 class TestVectorWienerWithI(unittest.TestCase):
     def testIMoments(self):
         w = VectorWienerWithI(noiseterms=2)
-        T = 100
-        points = list(range(T))
-        #random.shuffle(points)
+        n = 10000
+        dt = 0.1
+        sigma = dt/np.sqrt(2)
+        points = np.arange(n+1)*dt
         for t in points:
             w.get_w(t)
         
         data = np.stack([w.get_I_matrix(points[i], points[i+1]) for i in range(len(points)-1)])
-        print(data.shape)
+        assert np.isclose(data.mean(axis=0),[
+            [0, 0],
+            [0, 0]
+        ], atol=5*sigma/np.sqrt(n)).all()
+
+        m11 = dt**2/2
+        m12 = dt**2/2
+        assert np.isclose((data**2).mean(axis=0),[
+            [m11, m12],
+            [m12, m11]
+        ], atol=5*sigma/np.sqrt(n)).all()
+
+        
+        m11 = 15/4*dt**4
+        m12 = 7/4*dt**4
+        assert np.isclose((data**4).mean(axis=0),[
+            [m11, m12],
+            [m12, m11]
+        ], atol=5*68*dt**4).all()
 
 
 if __name__ == '__main__':

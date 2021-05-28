@@ -528,23 +528,22 @@ class VectorWienerWithI:
 
         # Recall: I(1->3)  = I(1->2) + I(2->3) + dWa(2->3) dWb(1->2)
 
-        first_i = self.sample_points.bisect_left(t1) - 1
-        last_i = self.sample_points.bisect_left(t2)
-        
-        retI = np.zeros((self.noiseterms,self.noiseterms))
+        I = 0
+        w1 = self.sample_points[t1]['w']
+        it_lower = self.sample_points.irange(t1, t2)
+        it_upper = self.sample_points.irange(t1, t2)
+        next(it_upper)
+        for t_upper in it_upper:
+            t_lower = next(it_lower)
+            I += self.sample_points[t_upper]['IToPrevPoint']            
+            dw = self.sample_points[t_upper]['w'] - self.sample_points[t_lower]['w']
+            dw_from_start = self.sample_points[t_lower]['w'] - w1
+            I += dw*dw_from_start
 
-        for i in range(first_i,last_i):
-            prev_t = self.sample_points.peekitem(i)[0]
-            next_t = self.sample_points.peekitem(i+1)[0]
+        dw = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+        np.fill_diagonal(I, 0.5*(dw**2 - (t2-t1))) # Diagonal entries work differently
 
-            prev_w = self.sample_points.peekitem(i)[1]['w']
-            next_w = self.sample_points.peekitem(i+1)[1]['w']
-
-            dt = next_t - prev_t
-            dw = next_w - prev_w
-            retI = retI + self.sample_points.peekitem(i+1)[1]['IToPrevPoint'] + np.outer(dwa,dwb)
-
-        return retZ
+        return I
 
     def ensure_sample_point(self,t):
         '''
@@ -579,7 +578,7 @@ class VectorWienerWithI:
         a = math.sqrt(2)*xi+eta
 
         Imat = (
-            Delta*(xi*xi.T + np.sqrt(rho)*(mu*xi.T - xi*mu.T))
+            Delta*(xi*xi.T/2 + np.sqrt(rho)*(mu*xi.T - xi*mu.T))
             + Delta/(2*np.pi)*  ((np.expand_dims(a, 1)*np.expand_dims(zeta, 2) - np.expand_dims(a, 2)*np.expand_dims(zeta, 1)).T*rec).sum(axis=-1)
         )
         
