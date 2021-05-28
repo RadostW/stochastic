@@ -1,4 +1,5 @@
 import jax
+import numpy as np
 
 class SDEProblem:
   '''
@@ -82,6 +83,18 @@ class VectorSDEProblem:
     self.x0 = x0
     self.tmax = tmax
 
-    self.ap = jax.grad(a)
-    self.bp = jax.grad(b)
+    tmpa = a(x0)
+    tmpb = b(x0)
+
+    assert isinstance(tmpa, np.ndarray) , 'Drift term should return np.array'
+    assert np.issubdtype(tmpa.dtype, np.floating) , f'Drift term should be array of floats, not {tmpa.dtype}.'
+    assert tmpa.shape == (dimension,) , f'Drift term should be array of shape (dimension,) == {(self.dimension,)}, not {tmpa.shape}'
+
+    assert isinstance(tmpb, np.ndarray) , 'Noise term should return np.array'
+    assert np.issubdtype(tmpb.dtype, np.floating) , f'Noise term should be array of floats, not {tmpb.dtype}.'
+    assert tmpb.shape == (dimension,noiseterms) , f'Drift term should be array of shape (dimension, noiseterms) == {(self.dimension,self.noiseterms)}, not {tmpb.shape}'
+    
+
+    self.ap = jax.jacfwd(a)
+    self.bp = jax.jacfwd(b)
 

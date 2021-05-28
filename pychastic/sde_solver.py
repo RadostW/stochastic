@@ -31,10 +31,16 @@ class SDESolver:
          Target mean square error density used in variable step integrators.
 
     '''
-    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = 0.001,
-                 max_dt = 0.1, seed = None, error_terms = 1,target_mse_density = 0.1):
+    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = 0.000,
+                 max_dt = 0.01, seed = None, error_terms = 1,target_mse_density = 0.0000001):
         self.adaptive = adaptive
-        self.scheme = scheme  # euler | milstein
+        self.scheme = scheme  # euler | milstein | wagner_platen | adaptive_euler | adaptive_milstein
+        if scheme == 'adaptive_euler':
+            self.scheme = 'euler'
+            self.adaptive = True
+        if scheme == 'adaptive_milstein':
+            self.scheme = 'milstein'
+            self.adaptive = True
         self.dt = dt
         self.min_dt = min_dt
         self.max_dt = max_dt
@@ -162,12 +168,10 @@ class SDESolver:
         while True:
             # adapt step
             if self.adaptive:
-              dt = optimal_dt(x)
-              dt = max(dt, min_dt)
-              dt = min(dt, max_dt)
-
-            if t + dt > problem.tmax:
-              dt = problem.tmax - t
+              dt = optimal_dt(x).item()
+              dt = max(dt, self.min_dt)
+              dt = min(dt, self.max_dt)
+              # print(f'x = {x}, t = {t}, dt = {dt}')
 
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
@@ -285,7 +289,6 @@ class VectorSDESolver:
             elif self.scheme == 'commutative_milstein':
                 comm_noise = wiener.get_commuting_noise(t,t+dt)
                 x = step(x, dt, dw, comm_noise)
-                raise NotImplementedError
             elif self.scheme == 'milstein':
                 raise NotImplementedError
 
