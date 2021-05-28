@@ -83,11 +83,11 @@ class SDESolver:
       if self.scheme == 'euler':
           if self.error_terms == 1:
             def optimal_dt(x):
-              return self.target_mse_density/problem.a(x)**2
+              return 2*self.target_mse_density/(problem.b(x)*problem.bp(x))**2
           
           elif self.error_terms == 2:
             def optimal_dt(x):
-              alfa = problem.a(x)**2
+              alfa = (problem.b(x)*problem.bp(x))**2/2
               beta = (
                   (problem.a(x)*problem.bp(x) + problem.b(x)**2*problem.bpp(x)/2)**2/3
                   + (problem.ap(x)*problem.b(x))**2/3
@@ -244,11 +244,10 @@ class VectorSDESolver:
         return step
 
     def get_optimal_dt_function(self, problem):
-        raise NotImplementedError
         if self.scheme == 'euler':
             if self.error_terms == 1:
                 def optimal_dt(x):
-                    pass
+                    return
                     
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
