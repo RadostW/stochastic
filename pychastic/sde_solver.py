@@ -32,8 +32,8 @@ class SDESolver:
          Target mean square error density used in variable step integrators.
 
     '''
-    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = 0.000,
-                 max_dt = 0.01, seed = None, error_terms = 1,target_mse_density = 0.0000001):
+    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = None,
+                 max_dt = None, dt_adapting_factor = 10, seed = None, error_terms = 1,target_mse_density = 0.0000001):
         self.adaptive = adaptive
         self.scheme = scheme  # euler | milstein | wagner_platen | adaptive_euler | adaptive_milstein
         if scheme == 'adaptive_euler':
@@ -43,8 +43,8 @@ class SDESolver:
             self.scheme = 'milstein'
             self.adaptive = True
         self.dt = dt
-        self.min_dt = min_dt
-        self.max_dt = max_dt
+        self.min_dt = min_dt or self.dt/dt_adapting_factor
+        self.max_dt = max_dt or self.dt*dt_adapting_factor
         self.seed = seed
         self.error_terms = error_terms
         self.target_mse_density = target_mse_density
@@ -151,8 +151,6 @@ class SDESolver:
         step = self.get_step_function(problem)
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
-          min_dt = self.dt/self.dt_adapting_factor
-          max_dt = self.dt*self.dt_adapting_factor
         
         # initialize values
         dt = self.dt
@@ -213,9 +211,23 @@ class VectorSDESolver:
          Step size in fixed-step integration.
 
     '''
-    def __init__(self, scheme = 'euler', dt = 0.01):
+    def __init__(self,
+            scheme = 'euler',
+            dt = 0.01,
+            dt_adapting_factor = 10,
+            min_dt = None,
+            max_dt = None,
+            error_terms = 1,
+            target_mse_density = 1e-2,
+            adaptive = False
+        ):
         self.scheme = scheme  # euler | milstein
         self.dt = dt
+        self.min_dt = min_dt or self.dt/dt_adapting_factor
+        self.max_dt = max_dt or self.dt*dt_adapting_factor
+        self.error_terms = error_terms
+        self.target_mse_density = target_mse_density
+        self.adaptive = adaptive        
 
     def get_step_function(self, problem):
         if self.scheme == 'euler':
@@ -230,6 +242,14 @@ class VectorSDESolver:
         #jax.jit(step) # ####### TODO #########
 
         return step
+
+    def get_optimal_dt_function(self, problem):
+        raise NotImplementedError
+        if self.scheme == 'euler':
+            if self.error_terms == 1:
+                def optimal_dt(x):
+                    pass
+                    
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
         '''
@@ -267,6 +287,8 @@ class VectorSDESolver:
             raise KeyError('Unknown scheme name: '+str(self.scheme))
 
         step = self.get_step_function(problem)
+        if self.adaptive:
+            optimal_dt = self.get_optimal_dt_function(problem)
 
         dt = self.dt
         t = 0.0
@@ -277,6 +299,11 @@ class VectorSDESolver:
         solution_values = [x]
 
         while True:
+            if self.adaptive:
+              dt = optimal_dt(x).item()
+              dt = max(dt, self.min_dt)
+              dt = min(dt, self.max_dt)
+
             w_prev = wiener.get_w(t)
             w_next = wiener.get_w(t+dt) # Careful to sample in correct order!
             dw = w_next - w_prev
