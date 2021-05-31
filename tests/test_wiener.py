@@ -3,6 +3,7 @@ from sortedcontainers.sorteddict import SortedDict
 
 from pychastic.wiener import Wiener
 from pychastic.wiener import WienerWithZ
+from pychastic.wiener import VectorWienerWithI
 
 import random
 import numpy as np
@@ -238,6 +239,11 @@ class TestWienerWithZ(unittest.TestCase):
 
 
     def test_vector_double_integrals(self):
+        '''
+        E(I_12) = 0, E(I_12 ^2) = h^2 / 2
+        E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
+        I_12 + I_21 = I_1 * I_2
+        '''
         w = VectorWiener(noiseterms=2)
         T = 100
         points = list(range(T))
@@ -249,7 +255,37 @@ class TestWienerWithZ(unittest.TestCase):
             dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
         dw_list = np.array(dw_list)
 
+class TestVectorWienerWithI(unittest.TestCase):
+    def testIMoments(self):
+        w = VectorWienerWithI(noiseterms=2)
+        n = 10000
+        dt = 0.1
+        sigma = dt/np.sqrt(2)
+        points = np.arange(n+1)*dt
+        for t in points:
+            w.get_w(t)
         
+        data = np.stack([w.get_I_matrix(points[i], points[i+1]) for i in range(len(points)-1)])
+        assert np.isclose(data.mean(axis=0),[
+            [0, 0],
+            [0, 0]
+        ], atol=5*sigma/np.sqrt(n)).all()
+
+        m11 = dt**2/2
+        m12 = dt**2/2
+        assert np.isclose((data**2).mean(axis=0),[
+            [m11, m12],
+            [m12, m11]
+        ], atol=5*sigma/np.sqrt(n)).all()
+
+        
+        m11 = 15/4*dt**4
+        m12 = 7/4*dt**4
+        assert np.isclose((data**4).mean(axis=0),[
+            [m11, m12],
+            [m12, m11]
+        ], atol=5*68*dt**4).all()
+
 
 if __name__ == '__main__':
     #np.random.seed(0)

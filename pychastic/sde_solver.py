@@ -1,9 +1,10 @@
 import jax
 import time
+import jax.numpy as jnp
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
-from pychastic.wiener import Wiener
+from pychastic.wiener import VectorWienerWithI, Wiener
 from pychastic.wiener import WienerWithZ
 from pychastic.wiener import VectorWiener
 
@@ -31,8 +32,8 @@ class SDESolver:
          Target mean square error density used in variable step integrators.
 
     '''
-    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = 0.000,
-                 max_dt = 0.01, seed = None, error_terms = 1,target_mse_density = 0.0000001):
+    def __init__(self, adaptive = False, scheme = 'euler', dt = 0.01, min_dt = None,
+                 max_dt = None, dt_adapting_factor = 10, seed = None, error_terms = 1,target_mse_density = 0.0000001):
         self.adaptive = adaptive
         self.scheme = scheme  # euler | milstein | wagner_platen | adaptive_euler | adaptive_milstein
         if scheme == 'adaptive_euler':
@@ -42,8 +43,8 @@ class SDESolver:
             self.scheme = 'milstein'
             self.adaptive = True
         self.dt = dt
-        self.min_dt = min_dt
-        self.max_dt = max_dt
+        self.min_dt = min_dt or self.dt/dt_adapting_factor
+        self.max_dt = max_dt or self.dt*dt_adapting_factor
         self.seed = seed
         self.error_terms = error_terms
         self.target_mse_density = target_mse_density
@@ -82,11 +83,11 @@ class SDESolver:
       if self.scheme == 'euler':
           if self.error_terms == 1:
             def optimal_dt(x):
-              return self.target_mse_density/problem.a(x)**2
+              return 2*self.target_mse_density/(problem.b(x)*problem.bp(x))**2
           
           elif self.error_terms == 2:
             def optimal_dt(x):
-              alfa = problem.a(x)**2
+              alfa = (problem.b(x)*problem.bp(x))**2/2
               beta = (
                   (problem.a(x)*problem.bp(x) + problem.b(x)**2*problem.bpp(x)/2)**2/3
                   + (problem.ap(x)*problem.b(x))**2/3
@@ -150,8 +151,6 @@ class SDESolver:
         step = self.get_step_function(problem)
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
-          min_dt = self.dt/self.dt_adapting_factor
-          max_dt = self.dt*self.dt_adapting_factor
         
         # initialize values
         dt = self.dt
@@ -212,26 +211,47 @@ class VectorSDESolver:
          Step size in fixed-step integration.
 
     '''
-    def __init__(self, scheme = 'euler', dt = 0.01):
+    def __init__(self,
+            scheme = 'euler',
+            dt = 0.01,
+            dt_adapting_factor = 10,
+            min_dt = None,
+            max_dt = None,
+            error_terms = 1,
+            target_mse_density = 1e-2,
+            adaptive = False
+        ):
         self.scheme = scheme  # euler | milstein
         self.dt = dt
+        self.min_dt = min_dt or self.dt/dt_adapting_factor
+        self.max_dt = max_dt or self.dt*dt_adapting_factor
+        self.error_terms = error_terms
+        self.target_mse_density = target_mse_density
+        self.adaptive = adaptive        
 
     def get_step_function(self, problem):
         if self.scheme == 'euler':
             def step(x, dt, dw):
-                return x + problem.a(x)*dt + np.dot(problem.b(x),dw)
-        elif self.scheme == 'commutative_milstein':
-            def step(x, dt, dw, comm_noise):
-                return x + problem.a(x)*dt + np.dot(problem.b(x),dw) + np.tensordot( problem.bp(x) , comm_noise )
-        elif self.scheme == 'milstein':
-            def step(x, dt, dw, double_integrals):
-                raise NotImplementedError
+                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw)
+        elif self.scheme in ['milstein', 'commutative_milstein']:
+            def step(x, dt, dw, i):
+                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw) + jnp.tensordot( problem.bp(x) @ problem.b(x) , i.T )
         else:
             raise KeyError('Unknown scheme name')
 
-        #jax.jit(step) # ####### TODO #########
+        step = jax.jit(step)
 
         return step
+
+    def get_optimal_dt_function(self, problem):
+        if self.scheme == 'euler':
+            if self.error_terms == 1:
+                def optimal_dt(x):
+                    return 2*self.target_mse_density/((problem.bp(x) @ problem.b(x))**2).sum()
+                
+        optimal_dt = jax.jit(optimal_dt)
+        return optimal_dt
+                    
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
         '''
@@ -247,13 +267,13 @@ class VectorSDESolver:
         Returns
         -------
         dict
-            Dictionary containing 2 entries. Under key ``time_values`` a np.array of timestamps on which process was evaluated.
-            Under key ``solution_values`` a np.array of stochastic process values at corresponding time instances.
+            Dictionary containing 2 entries. Under key ``time_values`` a jnp.array of timestamps on which process was evaluated.
+            Under key ``solution_values`` a jnp.array of stochastic process values at corresponding time instances.
 
         Example
         -------
-        >>> import numpy as np
-        >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: np.array([1,1]), lambda x: np.array([[1,0.5],[0.5,1]]), 2, 2, np.array([1.5,0.5]), 1)
+        >>> import jax.numpy as jnp
+        >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: jnp.array([1,1]), lambda x: jnp.array([[1,0.5],[0.5,1]]), 2, 2, jnp.array([1.5,0.5]), 1)
         >>> solver = pychastic.sde_solver.VectorSDESolver()
         >>> solver.solve(problem)
         {'time_values': array([0.,0.01,...]), 'solution_values' : array([[1.5, 0.5], [1.76, 0.71], [1.93, 0.91], ...])} #some values random
@@ -264,11 +284,13 @@ class VectorSDESolver:
         elif self.scheme == 'commutative_milstein':
             wiener = wiener or VectorWiener(problem.noiseterms)
         elif self.scheme == 'milstein':
-            raise NotImplementedError
+            wiener = wiener or VectorWienerWithI(problem.noiseterms)
         else:
             raise KeyError('Unknown scheme name: '+str(self.scheme))
 
         step = self.get_step_function(problem)
+        if self.adaptive:
+            optimal_dt = self.get_optimal_dt_function(problem)
 
         dt = self.dt
         t = 0.0
@@ -279,6 +301,11 @@ class VectorSDESolver:
         solution_values = [x]
 
         while True:
+            if self.adaptive:
+              dt = optimal_dt(x).item()
+              dt = max(dt, self.min_dt)
+              dt = min(dt, self.max_dt)
+
             w_prev = wiener.get_w(t)
             w_next = wiener.get_w(t+dt) # Careful to sample in correct order!
             dw = w_next - w_prev
@@ -290,7 +317,8 @@ class VectorSDESolver:
                 comm_noise = wiener.get_commuting_noise(t,t+dt)
                 x = step(x, dt, dw, comm_noise)
             elif self.scheme == 'milstein':
-                raise NotImplementedError
+                i = wiener.get_I_matrix(t, t+dt)
+                x = step(x, dt, dw, i)
 
             solution_values.append(x)
             time_values.append(t)
@@ -299,6 +327,6 @@ class VectorSDESolver:
                 break
 
         return dict(
-            time_values=np.array(time_values),
-            solution_values=np.array(solution_values)
+            time_values=jnp.array(time_values),
+            solution_values=jnp.array(solution_values)
         )

@@ -1,6 +1,8 @@
+from numpy.core.fromnumeric import transpose
 import sortedcontainers
 from pychastic.cached_gaussian import normal
 import numpy as np
+import jax.numpy as jnp
 import math
 
 class Wiener:
@@ -482,7 +484,16 @@ class VectorWienerWithI:
         if t > t_max:
             self.ensure_sample_point(t)
         else:
-            raise NotImplementedError
+            next_i = self.sample_points.bisect_left(t)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t < 2*jnp.finfo(type(t)).eps ):
+                return self.sample_points[next_t]['w']
+            elif ( t - prev_t < 2*jnp.finfo(type(t)).eps ):
+                return self.sample_points[prev_t]['w']
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
+                # #### TODO #### Implement subsampling
 
         return self.sample_points[t]['w']
 
@@ -518,32 +529,47 @@ class VectorWienerWithI:
         if t1 > t_max:
             self.ensure_sample_point(t1)
         elif t1 not in self.sample_points:
-            raise NotImplementedError('Conditional subsampling not implemented.')
+            next_i = self.sample_points.bisect_left(t1)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t1 < 2*jnp.finfo(type(t1)).eps ):
+                t1 = next_t
+            elif ( t1 - prev_t < 2*jnp.finfo(type(t1)).eps ):
+                t1 = prev_t
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
 
         if t2 > t_max:
             self.ensure_sample_point(t2)
         elif t2 not in self.sample_points:
-            raise NotImplementedError('Conditional subsampling not implemented.')
+            next_i = self.sample_points.bisect_left(t2)
+            next_t = self.sample_points.peekitem(next_i)[0]
+            prev_t = self.sample_points.peekitem(next_i-1)[0]
+            if ( next_t - t2 < 2*jnp.finfo(type(t2)).eps ):
+                t2 = next_t
+            elif ( t2 - prev_t < 2*jnp.finfo(type(t2)).eps ):
+                t2 = prev_t
+            else:
+                raise NotImplementedError('Conditional subsampling not implemented.')
 
         # Recall: I(1->3)  = I(1->2) + I(2->3) + dWa(2->3) dWb(1->2)
 
-        first_i = self.sample_points.bisect_left(t1) - 1
-        last_i = self.sample_points.bisect_left(t2)
-        
-        retI = np.zeros((self.noiseterms,self.noiseterms))
+        I = 0
+        w1 = self.sample_points[t1]['w']
+        it_lower = self.sample_points.irange(t1, t2)
+        it_upper = self.sample_points.irange(t1, t2)
+        next(it_upper)
+        for t_upper in it_upper:
+            t_lower = next(it_lower)
+            I += self.sample_points[t_upper]['IToPrevPoint']            
+            dw = self.sample_points[t_upper]['w'] - self.sample_points[t_lower]['w']
+            dw_from_start = self.sample_points[t_lower]['w'] - w1
+            I += dw*dw_from_start
 
-        for i in range(first_i,last_i):
-            prev_t = self.sample_points.peekitem(i)[0]
-            next_t = self.sample_points.peekitem(i+1)[0]
+        dw = self.sample_points[t2]['w'] - self.sample_points[t1]['w']
+        np.fill_diagonal(I, 0.5*(dw**2 - (t2-t1))) # Diagonal entries work differently
 
-            prev_w = self.sample_points.peekitem(i)[1]['w']
-            next_w = self.sample_points.peekitem(i+1)[1]['w']
-
-            dt = next_t - prev_t
-            dw = next_w - prev_w
-            retI = retI + self.sample_points.peekitem(i+1)[1]['IToPrevPoint'] + np.outer(dwa,dwb)
-
-        return retZ
+        return I
 
     def ensure_sample_point(self,t):
         '''
@@ -567,24 +593,22 @@ class VectorWienerWithI:
         # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
         Delta = t - t_max
 
-        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0, self.noiseterms)])
+        xi = (1.0 / np.sqrt(Delta) * dW).reshape(1, -1)
+        mu = np.random.normal(size=self.noiseterms).reshape(1, -1)
+        eta = np.random.normal(size=(self.p, self.noiseterms))
+        zeta = np.random.normal(size=(self.p, self.noiseterms))
+        rec = 1/np.arange(1, self.p+1) # 1/r vector
+        rho = 1/12 - (rec**2).sum()/(2*np.pi**2)
 
-        xi = 1.0 / np.sqrt(Delta) * dW
-        mu = np.random.normal(size=noiseterms)
-        eta = np.random.normal(size=(noiseterms,self.p))
-        zeta = np.random.normal(size=(noiseterms,self.p))
-        rec = np.array([1.0/x for x in range(1,p+1)]) # 1/r vector
-        rho = 1.0/12.0 - 1.0 / math.sqrt(2.0 * math.pi) * sum([1.0/(x**2) for x in range(1,p+1)])
+        a = math.sqrt(2)*xi+eta
 
         Imat = (
-                Delta*( 0.5*np.outer(xi,xi) + np.sqrt(rho) ( np.outer(mu,xi) - np.outer(xi,mu) ) )
-                + Delta / (2*math.pi) * np.sum( rec * (
-                                                         np.outer(zeta , (math.sqrt(2)*xi + eta))
-                                                       - np.outer((math.sqrt(2)*xi + eta), zeta)  
-                                                      ) , axis = 0)
-               )
-
-        np.fill_diagonal(Imat, 0.5 (dW**2 - Delta)) # Diagonal entries work differently
+            Delta*(xi*xi.T/2 + np.sqrt(rho)*(mu*xi.T - xi*mu.T))
+            + Delta/(2*np.pi)*  ((np.expand_dims(a, 1)*np.expand_dims(zeta, 2) - np.expand_dims(a, 2)*np.expand_dims(zeta, 1)).T*rec).sum(axis=-1)
+        )
+        
+        np.fill_diagonal(Imat, 0.5*(dW**2 - Delta)) # Diagonal entries work differently
 
         self.sample_points[t] = {'w': self.sample_points[t_max]['w'] + dW, 'IToPrevPoint' : Imat}
 
