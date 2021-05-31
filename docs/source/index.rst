@@ -1,5 +1,5 @@
-Pychastic 0.1 Documentation
-===========================
+Pychastic Documentation
+=======================
 
 .. toctree::
    :hidden:
