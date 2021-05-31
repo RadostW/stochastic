@@ -4,7 +4,18 @@ Pychastic for molecular simulations
 Introduction - why bother?
 ''''''''''''''''''''''''''
 
-#### TODO #####
+Molecular dynamics finds applications in physics, material science, structural
+biology and others. Main problem with making MD simulations is that ODEs
+governing the systems are very stiff due to timescale disparity. One of shortest
+timescales is viscosity mediated relaxation of solvents. There are generally two
+ways of dealing with it -- explicit solvent and bigger supercomputer or implicit
+solvent and often lack of hydrodynamic interactions. In either case estimating
+diffusive properties of molecules is near impossible.
+
+Here SDEs come to rescue -- correct formulation of overdamped dynamics reduces
+order of ODEs to first order with stochastic noise removing shortest timescale
+from the simulations. Additionaly in Stokesian regime hydrodynamic interactions
+can be introduced via mobility matricies.
 
 Mathematical setting
 ''''''''''''''''''''
@@ -52,6 +63,11 @@ In the simplest approximation we can take:
 
 This way mobility goes to zero at contact with the wall and approaches bulk 
 value far from the wall.
+
+High performance code thanks to `jax.jit`
+'''''''''''''''''''''''''''''''''''''''''
+
+#### TODO ##### write someting about jax and jit, explain jnp
 
 Simulating scalar SDEs
 ''''''''''''''''''''''
@@ -124,6 +140,8 @@ equation thanks to adaptive timestepping -- nice!
 Generating many trajectories
 ''''''''''''''''''''''''''''
 
+##### TODO ###### Generating ensembles fast
+
 It's not uncommon that we're interested in a whole *ensemble* of trajectories.
 Because of jit optimization it's much faster to generate trajectories together
 rather than one at a time (considerable time is spent pre-compiling coefficient
@@ -160,16 +178,63 @@ simulataneously. It can be acomplished using vector SDEs.
 Simulating vector SDEs
 ''''''''''''''''''''''
 
+This section relies on package `pygrpy` for hydrodynamic interactions.
+You can get it via pip by
+
+.. prompt:: bash $ auto
+
+  $ python3 -m pip install pygrpy
+
+We'll be relying on `pygrpy.jax_grpy_tensors.muTT` functionality to get mobility
+matricies in Rotne-Prager-Yakamava approximation.
+
+Mobility matricies connect forces and velocities on particles via relation:
+.. math::
+    v_ai = \mu_{abij} F_{bj}
+
+Where indicies :math:`a,b` go through spheres id and indicies :math:`i,j` 
+through spatial dimensions.
+
+Given the :math:`\mu` tensor we can express dynamics of all spheres as
+.. math::
+    dX_{ai} = \mu_{abij} \partial_{bj} U(X) dt + \sqrt{2 k_b T} \sqrt{\mu}_{abij} dW_{ai} + k_bT \partial_{bj} \mu_{abij} dyt
+
+##### TODO ###### Chceck if Yakamawa approximation is divergence free.
+
+Where :math:`U` denotes potential energy dependent on locations of all beads. It
+turns out that Rotne-Prager-Yakamawa is particularly convenient for us as the 
+last term including diverngence vanishes.
+
 ##### TODO ###### 2 spheres with hydrodynamic interaction
 
-.. prompt:: python >>> auto
+For now we'll simulate two beads connected by a spring of rest length `4.0`. 
+We'll work in natural units where energy is measured in multiples of :math:`k_bT`
+and distances in multiples of sphere's radii.
 
+We cen go ahead and code this equation in python.
+
+.. prompt:: python >>> auto
   >>> import pychastic
-  >>> theta = 0.1; omega = 0.05; xi = 0.1; mu = 0.01
+  >>> import pygrpy.jax_grpy_tensors
+  >>> import jax.numpy as jnp
+  >>> radii = jnp.array([1.0,1.0]) # sizes of spheres we're using
+  >>> def u_ene(x): # potential energy shape
+  ...     locations = jnp.reshape(x,(2,3))
+  ...     distance = jnp.sqrt(jnp.sum((locations[0] - locations[1])**2))
+  ...     return (distance-4.0)**2
+  >>> def dift(x):
+  ...     locations = jnp.reshape(x,(2,3))
+  ...     mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
+  ...     force = jax.grad(u_ene)(x)
+  ...     return jnp.matmul(mu,force)
+  >>> def noise(x):
+  ...     locations = jnp.reshape(x,(2,3))
+  ...     mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
+  ...     return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
   >>> problem = pychastic.sde_problem.VectorSDEProblem(
-        lambda x: [mu, theta*(omega - x[1])],
-        lambda x: [[np.sqrt(x[1])*x[0],0],[0,xi * x[1]]],
-        [100.0,0.05],
+        drift,
+        noise,
+        jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(6,)),
         dimension = 2,
         noiseterms = 2,
         t_max = 2.0

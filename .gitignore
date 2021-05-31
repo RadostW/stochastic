@@ -13,3 +13,6 @@ lib64
 pyvenv.cfg
 
 *.egg-info
+
+*.png
+*.csv
