@@ -18,3 +18,9 @@ Wiener process variants
 
 .. automodule:: pychastic.wiener
    :members:
+
+Expected values of principle integrals
+''''''''''''''''''''''''''''''''''''''
+
+.. automodule:: pychastic.wiener_integral_moments
+   :members:
