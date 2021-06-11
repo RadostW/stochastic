@@ -9,20 +9,36 @@ class normal:
   def _sample_more(self):
     self.buffer = np.concatenate([self.buffer, self.rng.normal(size=self.n)])
     self.n *= 2
-    
-  def get_sample(self, size=1):
+  
+
+  def get_sample(self, size=1, n=None):
     '''
     Parameters
     ----------
     size : int or tuple of integers
 
     '''
-    n = np.prod(size)
+    n = np.prod(size) if n is None else n
     while n > len(self.buffer):
       self._sample_more()
     x = self.buffer[:n]
     self.buffer = self.buffer[n:]
     return x.reshape(size)
+
+
+  def get_number_of_samples(self, n):
+    '''
+    Parameters
+    ----------
+    n : int or tuple of integers
+
+    '''
+    while n > len(self.buffer):
+      self._sample_more()
+    x = self.buffer[:n]
+    self.buffer = self.buffer[n:]
+    # return x.reshape(n) # slow :<
+    return x
 
   def __iter__(self):
     return self

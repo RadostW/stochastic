@@ -251,6 +251,7 @@ class VectorWiener:
         }
         self.normal_generator = normal()
 
+
     def get_w(self, t):
         '''
         Get value of Wiener probess at specified timestamp.
@@ -279,10 +280,12 @@ class VectorWiener:
         if t in self.sample_points:
             return self.sample_points[t]['w']
 
-        t_max = self.sample_points.keys()[-1]
+        (t_max, last_values) = self.sample_points.peekitem() # last item is default
         if t > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
-            self.sample_points[t] = {'w': np.array(self.sample_points[t_max]['w'] + np.sqrt(t-t_max)*nvec)}
+            nvec = self.normal_generator.get_number_of_samples(self.noiseterms)
+            #nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)]) # slow :<
+            w_val = np.array(last_values['w'] + np.sqrt(t-t_max)*nvec)
+            self.sample_points[t] = {'w': w_val}
         else:
             #print(f'Called with t {t}, current t_max is {t_max}')
             #print(self.sample_points)
@@ -334,13 +337,15 @@ class VectorWiener:
 
         t_max = self.sample_points.keys()[-1]
         if t1 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            nvec = self.normal_generator.get_sample(self.noiseterms,n=self.noiseterms)
+            # nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)]) # slow :<
             self.sample_points[t1] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t1-t_max)*nvec}
         elif t1 not in self.sample_points:
             raise NotImplementedError
 
         if t2 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            nvec = self.normal_generator.get_sample(self.noiseterms,n=self.noiseterms)
+            # nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)]) # slow :<
             self.sample_points[t2] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t2-t_max)*nvec}
         elif t2 not in self.sample_points:
             raise NotImplementedError
@@ -401,13 +406,15 @@ class VectorWiener:
 
         t_max = self.sample_points.keys()[-1]
         if t1 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            #nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            nvec = self.normal_generator.get_sample(self.noiseterms,n=self.noiseterms)
             self.sample_points[t1] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t1-t_max)*nvec}
         elif t1 not in self.sample_points:
             raise NotImplementedError
 
         if t2 > t_max:
-            nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            #nvec = np.array([next(self.normal_generator) for x in range(0,self.noiseterms)])
+            nvec = self.normal_generator.get_sample(self.noiseterms,n=self.noiseterms)
             self.sample_points[t2] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t2-t_max)*nvec}
         elif t2 not in self.sample_points:
             raise NotImplementedError
@@ -497,6 +504,7 @@ class VectorWienerWithI:
 
         return self.sample_points[t]['w']
 
+    @profile
     def get_I_matrix(self, t1, t2):
         '''
         Get value of double integrals :math:`I_{jk}` (compare Kloden-Platen (10.3.5))
@@ -571,6 +579,7 @@ class VectorWienerWithI:
 
         return I
 
+    @profile
     def ensure_sample_point(self,t):
         '''
         Checks if sample point exists, adds new sample if necessary
@@ -589,15 +598,18 @@ class VectorWienerWithI:
 
         t_max = self.sample_points.keys()[-1]
 
-        # ##### TODO ###### change implemntation to use cached normals
         # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
         Delta = t - t_max
 
-        dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0, self.noiseterms)])
+        # dW = np.sqrt(Delta)*np.array([next(self.normal_generator) for x in range(0, self.noiseterms)]) # slow :<
+        dW = np.sqrt(Delta)* self.normal_generator.get_sample(self.noiseterms,n=self.noiseterms)
         xi = (1.0 / np.sqrt(Delta) * dW).reshape(1, -1)
-        mu = np.random.normal(size=self.noiseterms).reshape(1, -1)
-        eta = np.random.normal(size=(self.p, self.noiseterms))
-        zeta = np.random.normal(size=(self.p, self.noiseterms))
+        # mu = np.random.normal(size=self.noiseterms).reshape(1, -1)
+        mu = self.normal_generator.get_sample(size=(1,self.noiseterms),n=self.noiseterms)
+        # eta = np.random.normal(size=(self.p, self.noiseterms))
+        eta = self.normal_generator.get_sample(size=(self.p,self.noiseterms),n=self.p*self.noiseterms)
+        # zeta = np.random.normal(size=(self.p, self.noiseterms))
+        zeta = self.normal_generator.get_sample(size=(self.p,self.noiseterms),n=self.p*self.noiseterms)
         rec = 1/np.arange(1, self.p+1) # 1/r vector
         rho = 1/12 - (rec**2).sum()/(2*np.pi**2)
 

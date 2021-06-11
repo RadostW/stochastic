@@ -299,7 +299,7 @@ class VectorSDESolver:
         optimal_dt = jax.jit(optimal_dt)
         return optimal_dt
                     
-
+    @profile
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
         '''
         Produce one realisation of the process specified by ``problem``.
@@ -376,6 +376,6 @@ class VectorSDESolver:
                 break
 
         return dict(
-            time_values=jnp.array(time_values),
-            solution_values=jnp.array(solution_values)
+            time_values=jnp.array(np.array(time_values)),
+            solution_values=jnp.array(np.array(solution_values))
         )
