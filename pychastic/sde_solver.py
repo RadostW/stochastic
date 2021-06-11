@@ -233,6 +233,7 @@ class VectorSDESolver:
         if self.scheme == 'euler':
             def step(x, dt, dw):
                 return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw)
+                step(problem.x0,self.dt,jnp.zeros(problem.noiseterms))
         elif self.scheme in ['milstein', 'commutative_milstein']:
             def step(x, dt, dw, i):
                 return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw) + jnp.tensordot( problem.bp(x) @ problem.b(x) , i.T )
@@ -252,7 +253,7 @@ class VectorSDESolver:
         optimal_dt = jax.jit(optimal_dt)
         return optimal_dt
                     
-
+    @profile
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
         '''
         Produce one realisation of the process specified by ``problem``.
