@@ -36,7 +36,6 @@ and you'll be good to go.
 Next steps
 ''''''''''
 
-* :doc:`Getting started - minimal<begginer>`.
 * :doc:`Tutorial - derivatives pricing  themed<optionpricing>`.
 * :doc:`Tutorial - molecular dynamics themed<moleculardynamics>`.
 * :doc:`Examples <examples>`.
