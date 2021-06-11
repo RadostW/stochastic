@@ -67,7 +67,33 @@ value far from the wall.
 High performance code thanks to `jax.jit`
 '''''''''''''''''''''''''''''''''''''''''
 
-#### TODO ##### write someting about jax and jit, explain jnp
+Python code can be slow and when simulating SDEs we'll be evaluating coefficient
+functions thousands of times. The solution to the issue is *just in time 
+compilation* or `jit`. It allows users to still write python code, but compiles
+it to machine code when necessary to make it comparably fast to C code.
+
+Second problem we encounter in numerical solution of SDEs is the need to compute
+gradients. Fortunately we don't need to manually type in derivatives and higher
+derivatives of all functions we're using. `jax.grad` is a package that can 
+figure out derivatives of functions as long as they are built from familiar 
+blocks such as `sin` `cos` or `pow` functions.
+
+Amazingly we can have both at the same time -- `jax` is a package designed 
+precisely with this in mind. Originally designed to accelerate gradient 
+computations in machine learning it will suit us just fine.
+
+If it all sounds too good to be true you're partially right. All of this 
+acceleration and gradients comes at expense of giving up some functionality of 
+numpy. In 'jax' all arrays are immutable which allows for keeping track of all
+function applications.
+
+*Essentially, to have gradients, you need to program functionally.*
+
+In most cases we've encountered it's not a big problem since the equations 
+usually come from mathematical or physical background where notation reflects
+functional, rather than imperative, mindset.
+
+You can learn more how to code better in `jax` in their `tutorial <https://jax.readthedocs.io>`_.
 
 Simulating scalar SDEs
 ''''''''''''''''''''''
