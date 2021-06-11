@@ -626,3 +626,22 @@ class VectorWienerWithI:
 
 
 
+def f(p, Delta, dW, xi, mu, eta, zeta):
+    rec = 1/jnp.arange(1, p+1) # 1/r vector
+    rho = 1/12 - (rec**2).sum()/(2*jnp.pi**2)
+
+    a = jnp.sqrt(2)*xi+eta
+    muxi = mu*xi.T
+    azeta1 = jnp.expand_dims(a, 1)*jnp.expand_dims(zeta, 2)
+    azeta2 = jnp.transpose(azeta1, (0, 2, 1))
+    Imat = (
+        Delta*(xi*xi.T/2 + np.sqrt(rho)*(muxi - muxi.T))
+        + Delta/(2*np.pi)*  ((azeta1 - azeta2).T*rec).sum(axis=-1)
+    )
+    
+    Imat = fill_diagonal(Imat, 0.5*(dW**2 - Delta)) # Diagonal entries work differently
+
+def fill_diagonal(a, val):
+  assert a.ndim >= 2
+  i, j = jnp.diag_indices(min(a.shape[-2:]))
+  return a.at[..., i, j].set(val)
