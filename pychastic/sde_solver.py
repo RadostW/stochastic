@@ -327,6 +327,6 @@ class VectorSDESolver:
                 break
 
         return dict(
-            time_values=jnp.array(time_values),
-            solution_values=jnp.array(solution_values)
+            time_values=jnp.array(np.array(time_values)),
+            solution_values=jnp.array(np.array(solution_values))
         )
