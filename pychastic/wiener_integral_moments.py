@@ -8,8 +8,7 @@ def E(alpha) -> poly:
     Calculate expected value of mixed winer integral E(I_alpha).
     Entries in multindex alpha coresspond to:
 
-    * 0 - time dimension
-    
+    * 0 - time dimension    
     * positive integer - wiener dimension
 
     Parameters
@@ -34,8 +33,7 @@ def E2(alpha, beta=None) -> poly:
     E(I_alpha^2) if beta=None.
     Entries in multindices alpha and beta coresspond to:
     
-    * 0 - time dimension
-    
+    * 0 - time dimension    
     * positive integer - wiener dimension
 
     Parameters
