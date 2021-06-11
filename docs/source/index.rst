@@ -5,17 +5,16 @@ Pychastic Documentation
    :hidden:
    :maxdepth: 1
    
-   Getting started <begginer>
    Tutorial (derivatives pricing) <optionpricing>
    Tutorial (molecular dynamics) <moleculardynamics>
-   Examples <examples>
+   Minimal examples <examples>
    Detailed reference <reference>
 
 Pychastic is a user friendly oriented stochastic differential equation
 integrator package for both scalar and vector stochastic differential
 equations.
 
-Stochastic differential equations find in all places where "noise" is 
+Stochastic differential equations find use in all places where "noise" is 
 important part of the problem such as microscopic phenomena or pandemic
 dynamics. The framework of Ito calculus gained somewhat mainstream 
 attention since the model of Black-Sholes allowed for accurate pricing of
