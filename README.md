@@ -1,24 +1,15 @@
-todo
-- results
-  - comparison of 1 dim euler/milstein fixed/adaptive
-- code
-  - higher order integrals in wiener instance
-  - tests for subsampling
-  - configure testing framework
-  - configure debugging framework
-  - interface for sampling multiple trajectories
-  - speed optimization
-- paper
-  - neat tables with schemes, coef. functions, integral covariances, optimal dt formulas
-  - comparison of 1 dim euler/milstein fixed/adaptive
-- package
-  - configure `setup.py`
-  - decide on name
-  - readme
+# pychastic
 
-Notes
-```
-export OMP_NUM_THREADS=1
-export USE_SIMPLE_THREADED_LEVEL3=1
-```
-might help with `OpenBLAS blas_thread_init` error.
+All python stochastic differential equations solver.
+
+Built for stochastic simulations of hydrodynamically interacting 
+brownian particles (molecular dynamics), but can do much more 
+(such as option pricing in stochastic volitality models).
+
+Uses `jax`, `jax.jit` and `jax.grad` for performace and ease of use.
+
+# License
+
+This software is licensed under MIT license
+
+Copyright (c) Radost Waszkiewicz and Maciej Bartczak (2021).

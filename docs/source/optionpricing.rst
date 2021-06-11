@@ -72,6 +72,8 @@ Simulating scalar SDEs
   >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
   >>> plt.show()
 
+.. image:: tutorial_derivatives_geometric.png
+
 Here we define problem of stock with initial value of ``100.0`` (say dolars) and 
 variability of ``5%`` per unit of time (say year) and we simulate it for ``2.0``
 units of time (say years), with default time step of ``0.01`` (say years).
@@ -111,17 +113,28 @@ volitaility value in the second component of our solution vector ``x[1]``.
 .. prompt:: python >>> auto
 
   >>> import pychastic
+  >>> import jax.numpy as jnp
   >>> theta = 0.1; omega = 0.05; xi = 0.1; mu = 0.01
   >>> problem = pychastic.sde_problem.VectorSDEProblem(
-        lambda x: [mu, theta*(omega - x[1])],
-        lambda x: [[np.sqrt(x[1])*x[0],0],[0,xi * x[1]]],
-        [100.0,0.05],
+        lambda x: jnp.array([mu, theta*(omega - x[1])]),
+        lambda x: jnp.array([[jnp.sqrt(x[1])*x[0],0],[0,xi * x[1]]]),
         dimension = 2,
         noiseterms = 2,
-        t_max = 2.0
+        x0 = jnp.array([100.0,0.05]),
+        tmax = 2.0
         )
   >>> solver = pychastic.sde_solver.VectorSDESolver()
   >>> trajectory = solver.solve(problem)
+  >>> import matplotlib.pyplot as plt
+  >>> fig, axs = plt.subplots(2)
+  >>> axs[0].plot(trajectory['time_values'],trajectory['solution_values'][:,0])
+  >>> axs[1].plot(trajectory['time_values'],trajectory['solution_values'][:,1])
+  >>> axs[0].set_title('Stock price')
+  >>> axs[1].set_title('Stock volitality')
+  >>> plt.tight_layout()
+  >>> plt.show()
+
+.. image:: tutorial_derivatives_vector.png
 
 Note that ``VectorSDEProblem`` supports driving two equations with the same 
 noise because of that we needed to pass a diagonal matrix as noise term 
@@ -141,10 +154,10 @@ rather than one at a time. Method ``solve_many`` is just what we need here.
   >>> problem = pychastic.sde_problem.VectorSDEProblem(
         lambda x: [mu, theta*(omega - x[1])],
         lambda x: [[np.sqrt(x[1])*x[0],0],[0,xi * x[1]]],
-        [100.0,0.05],
         dimension = 2,
         noiseterms = 2,
-        t_max = 2.0
+        x0 = [100.0,0.05],
+        tmax = 2.0
         )
   >>> solver = pychastic.sde_solver.VectorSDESolver()
   >>> n_traj = 100 # number of monte-carlo runs

@@ -239,6 +239,11 @@ class TestWienerWithZ(unittest.TestCase):
 
 
     def test_vector_double_integrals(self):
+        '''
+        E(I_12) = 0, E(I_12 ^2) = h^2 / 2
+        E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
+        I_12 + I_21 = I_1 * I_2
+        '''
         w = VectorWiener(noiseterms=2)
         T = 100
         points = list(range(T))

@@ -72,6 +72,5 @@ html_static_path = ['_static']
 
 # -- Copybuttion option -----------------------------------------------------
 
-# Removes annoying >>> with a button
-
-copybutton_prompt_text = ">>> "
+# Removes annoying >>> with a copybutton
+copybutton_prompt_text = r'>>> |\.\.\. '
