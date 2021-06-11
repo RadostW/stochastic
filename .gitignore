@@ -15,4 +15,7 @@ pyvenv.cfg
 *.egg-info
 
 *.png
+!docs/**/*.png
+
+
 *.csv
