@@ -7,7 +7,8 @@ from pychastic.sde_problem import VectorSDEProblem
 from pychastic.wiener import VectorWienerWithI, Wiener
 from pychastic.wiener import WienerWithZ
 from pychastic.wiener import VectorWiener
-
+from pychastic.utils import contract
+import pychastic.wiener_integral_moments
 
 class SDESolver:
     '''
@@ -230,12 +231,21 @@ class VectorSDESolver:
         self.adaptive = adaptive        
 
     def get_step_function(self, problem):
+        id_ = lambda x: x
         if self.scheme == 'euler':
             def step(x, dt, dw):
-                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw)
+                return x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw)
         elif self.scheme in ['milstein', 'commutative_milstein']:
-            def step(x, dt, dw, i):
-                return x + problem.a(x)*dt + jnp.dot(problem.b(x),dw) + jnp.tensordot( problem.bp(x) @ problem.b(x) , i.T )
+            def step(x, dt, dw, i11):
+                return x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw) + contract(problem.L1(problem.L1(id_))(x), i11)
+        elif self.scheme == 'wagner_platen':
+            def step(x, dt, dw, i11, i01, i10, i111):
+                return (
+                    x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw) + contract(problem.L1(problem.L1(id_))(x), i11)
+                    + contract(problem.L0(problem.L1(id_))(x), i01)
+                    + contract(problem.L1(problem.L0(id_))(x), i10)
+                    + contract(problem.L1(problem.L1(problem.L1(id_)))(x), i111)
+                )
         else:
             raise KeyError('Unknown scheme name')
 
@@ -244,10 +254,47 @@ class VectorSDESolver:
         return step
 
     def get_optimal_dt_function(self, problem):
-        if self.scheme == 'euler':
-            if self.error_terms == 1:
+        id_ = lambda x: x
+        if self.error_terms == 1:
+            if self.scheme == 'euler':
+                order = 2
+                p = pychastic.wiener_integral_moments.E2([1, 1])
+                a = lambda x: p.coef[order]*((problem.L1(problem.L1(id_))(x))**2).sum()
+            
+            elif self.scheme in ['milstein', 'commutative_milstein']:
+                order = 3
+                a01 = a10 = pychastic.wiener_integral_moments.E2([1, 0]).coef[order]
+                a111 = pychastic.wiener_integral_moments.E2([1, 1, 1]).coef[order]
+                a = lambda x: (
+                    (problem.L0(problem.L1(id_))(x)**2).sum()*a01
+                    + (problem.L1(problem.L0(id_))(x)**2).sum()*a10
+                    + (problem.L1(problem.L1(problem.L1(id_)))(x)**2).sum()*a111
+                )
+            
+            else:
+                raise ValueError
+
+            def optimal_dt(x):
+                return (self.target_mse_density/a(x))**(1/(order-1))
+
+        if self.error_terms == 2:
+            if self.scheme == 'euler':
+                order = 2
+                p = pychastic.wiener_integral_moments.E2([1, 1])
+                a = lambda x: p.coef[order]*((problem.L1(problem.L1(id_))(x))**2).sum()
+                b01 = b10 = pychastic.wiener_integral_moments.E2([1, 0]).coeid_[order+1]
+                b111 = pychastic.wiener_integral_moments.E2([1, 1, 1]).coeid_[order+1]
+                b = lambda x: (
+                    (problem.L0(problem.L1(id_))(x)**2).sum()*b01
+                    + (problem.L1(problem.L0(id_))(x)**2).sum()*b10
+                    + (problem.L1(problem.L1(problem.L1(id_)))(x)**2).sum()*b111
+                )
                 def optimal_dt(x):
-                    return 2*self.target_mse_density/((problem.bp(x) @ problem.b(x))**2).sum()
+                    a_val = a(x)
+                    return 2*self.target_mse_density / (a_val+jnp.sqrt(a_val**2 + 4*b(x)*self.target_mse_density))
+            
+            else:
+                raise ValueError
                 
         optimal_dt = jax.jit(optimal_dt)
         return optimal_dt
@@ -319,6 +366,8 @@ class VectorSDESolver:
             elif self.scheme == 'milstein':
                 i = wiener.get_I_matrix(t, t+dt)
                 x = step(x, dt, dw, i)
+            else:
+                raise ValueError
 
             solution_values.append(x)
             time_values.append(t)
