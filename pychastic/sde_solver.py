@@ -253,7 +253,6 @@ class VectorSDESolver:
         optimal_dt = jax.jit(optimal_dt)
         return optimal_dt
                     
-    @profile
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
         '''
         Produce one realisation of the process specified by ``problem``.

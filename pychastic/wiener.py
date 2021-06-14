@@ -504,7 +504,6 @@ class VectorWienerWithI:
 
         return self.sample_points[t]['w']
 
-    @profile
     def get_I_matrix(self, t1, t2):
         '''
         Get value of double integrals :math:`I_{jk}` (compare Kloden-Platen (10.3.5))
@@ -579,7 +578,6 @@ class VectorWienerWithI:
 
         return I
 
-    @profile
     def ensure_sample_point(self,t):
         '''
         Checks if sample point exists, adds new sample if necessary
