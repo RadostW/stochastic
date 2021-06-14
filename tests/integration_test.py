@@ -29,7 +29,8 @@ problem = pychastic.sde_problem.VectorSDEProblem(
       noiseterms = 6,
       tmax = 500.0)
 solver = pychastic.sde_solver.VectorSDESolver()
-trajectory = solver.solve(problem) # takes about 10 seconds
+solver.scheme='euler'
+trajectory = solver.solve(problem) # takes about 5 seconds
 
 plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
 plt.plot(trajectory['time_values'],trajectory['solution_values'][:,3])
