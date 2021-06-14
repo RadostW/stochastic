@@ -52,8 +52,8 @@ Mathematically we can express this as:
 Where :math:`\sigma` is proportionality constant (such as :math:`\sigma = 0.05`
 to express 5% variations per one unit of time such as year).
 
-This equation has exact solution ###### TODO ########, but we'll simulate it 
-using ``pychastic`` package instead.
+This equation has exact solution :math:`X = X_0 \exp(-\sigma^2/2 t + \sigma W(t))`,
+but we'll simulate it using ``pychastic`` package instead.
 
 Simulating scalar SDEs
 ''''''''''''''''''''''
