@@ -7,7 +7,8 @@ def E(alpha) -> poly:
     """
     Calculate expected value of mixed winer integral E(I_alpha).
     Entries in multindex alpha coresspond to:
-    * 0 - time dimension
+
+    * 0 - time dimension    
     * positive integer - wiener dimension
 
     Parameters
@@ -26,17 +27,21 @@ def E(alpha) -> poly:
         return poly([1]).integ(len(alpha))
 
 
-def E2(alpha, beta) -> poly:
+def E2(alpha, beta=None) -> poly:
     """
-    Calculate expected value of a product of two mixed winer integrals E(I_alpha*I_beta).
+    Calculate expected value of a product of two mixed winer integrals E(I_alpha*I_beta) or
+    E(I_alpha^2) if beta=None.
     Entries in multindices alpha and beta coresspond to:
-    * 0 - time dimension
+    
+    * 0 - time dimension    
     * positive integer - wiener dimension
 
     Parameters
     ----------
     alpha : array of integers
-    beta : array of integers
+        multindex of the first integral
+    beta : array of integers or None
+        multindex of the second integral
 
     Returns
     -------
@@ -44,6 +49,8 @@ def E2(alpha, beta) -> poly:
         polynomial in time
 
     """
+    beta = alpha if beta is None else beta
+
     if len(alpha) == 0:
         return E(beta)
     if len(beta) == 0:
