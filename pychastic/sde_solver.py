@@ -214,6 +214,7 @@ class SDESolver:
                 wieners = [WienerWithZ() for _ in range(n_trajectories)]
 
         step = self.get_step_function(problem)
+        optimal_dt = None
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
         
