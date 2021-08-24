@@ -244,16 +244,17 @@ class TestWienerWithZ(unittest.TestCase):
         E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
         I_12 + I_21 = I_1 * I_2
         '''
-        w = VectorWiener(noiseterms=2)
-        T = 100
-        points = list(range(T))
-        for t in points:
-            w.get_w(float(t))
-
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-        dw_list = np.array(dw_list)
+        return #unfinished test below
+        #w = VectorWiener(noiseterms=2)
+        #T = 100
+        #points = list(range(T))
+        #for t in points:
+        #    w.get_w(float(t))
+        #
+        #dw_list = []
+        #for t in range(T):
+        #    dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+        #dw_list = np.array(dw_list)
 
 class TestVectorWienerWithI(unittest.TestCase):
     def testIMoments(self):
