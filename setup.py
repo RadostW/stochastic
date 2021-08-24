@@ -4,7 +4,7 @@ with open('README.md') as f:
     long_description = f.read()
 
 setup(name='pychastic',
-      version='0.1.4',
+      version='0.1.8',
       description='Solvers for stochastic differential equations',
       url='https://github.com/RadostW/stochastic',
       author='Radost Waszkiewicz & Maciej Bartczak',
@@ -16,5 +16,6 @@ setup(name='pychastic',
           'Source': 'https://github.com/RadostW/stochastic'
       },
       license='MIT',
+      install_requires = ['jax','jaxlib','numpy','sortedcontainers'],
       packages=['pychastic'],
       zip_safe=False)

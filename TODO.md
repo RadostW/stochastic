@@ -8,13 +8,15 @@ todo
   - configure debugging framework
   - interface for sampling multiple trajectories
   - speed optimization
+  - add solve_many routine
 - paper
   - neat tables with schemes, coef. functions, integral covariances, optimal dt formulas
   - comparison of 1 dim euler/milstein fixed/adaptive
 - package
-  - configure `setup.py`
-  - decide on name
-  - readme
+  [x] fix issues with requirements in pip
+  [x] configure `setup.py`
+  [x] decide on name
+  [x] readme
 
 Notes
 ```
