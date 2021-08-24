@@ -2,7 +2,7 @@ import jax
 import numpy as np
 import jax.numpy as jnp
 from functools import wraps
-from pychastic.utils import contract
+import pychastic.utils
 
 class SDEProblem:
   '''
@@ -109,7 +109,7 @@ class VectorSDEProblem:
     @wraps(f)
     def wrapped(x):
       b_val = self.b(x)
-      return contract(jax.jacobian(f)(x), self.a(x)) + 0.5*contract(jax.hessian(f)(x), b_val@b_val.T)
+      return pychastic.utils.contract_all(jax.jacobian(f)(x), self.a(x)) + 0.5*pychastic.utils.contract_all(jax.hessian(f)(x), b_val@b_val.T)
     return wrapped
   
   def L1(self, f):

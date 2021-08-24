@@ -7,7 +7,7 @@ from pychastic.sde_problem import VectorSDEProblem
 from pychastic.wiener import VectorWienerWithI, Wiener
 from pychastic.wiener import WienerWithZ
 from pychastic.wiener import VectorWiener
-from pychastic.utils import contract
+import pychastic.utils
 import pychastic.wiener_integral_moments
 
 class SDESolver:
@@ -257,17 +257,17 @@ class VectorSDESolver:
         id_ = lambda x: x
         if self.scheme == 'euler':
             def step(x, dt, dw):
-                return x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw)
+                return x + problem.L0(id_)(x)*dt + pychastic.utils.contract_all(problem.L1(id_)(x), dw)
         elif self.scheme in ['milstein', 'commutative_milstein']:
             def step(x, dt, dw, i11):
-                return x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw) + contract(problem.L1(problem.L1(id_))(x), i11)
+                return x + problem.L0(id_)(x)*dt + pychastic.utils.contract_all(problem.L1(id_)(x), dw) + pychastic.utils.contract_all(problem.L1(problem.L1(id_))(x), i11)
         elif self.scheme == 'wagner_platen':
             def step(x, dt, dw, i11, i01, i10, i111):
                 return (
-                    x + problem.L0(id_)(x)*dt + contract(problem.L1(id_)(x), dw) + contract(problem.L1(problem.L1(id_))(x), i11)
-                    + contract(problem.L0(problem.L1(id_))(x), i01)
-                    + contract(problem.L1(problem.L0(id_))(x), i10)
-                    + contract(problem.L1(problem.L1(problem.L1(id_)))(x), i111)
+                    x + problem.L0(id_)(x)*dt + pychastic.utils.contract_all(problem.L1(id_)(x), dw) + pychastic.utils.contract_all(problem.L1(problem.L1(id_))(x), i11)
+                    + pychastic.utils.contract_all(problem.L0(problem.L1(id_))(x), i01)
+                    + pychastic.utils.contract_all(problem.L1(problem.L0(id_))(x), i10)
+                    + pychastic.utils.contract_all(problem.L1(problem.L1(problem.L1(id_)))(x), i111)
                 )
         else:
             raise KeyError('Unknown scheme name')
@@ -391,3 +391,21 @@ class VectorSDESolver:
             self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
             for wiener in wieners
         ]
+
+    def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
+        if self.scheme == 'euler':
+            wiener = wiener or VectorWiener(problem.noiseterms)
+        elif self.scheme == 'commutative_milstein':
+            wiener = wiener or VectorWiener(problem.noiseterms)
+        elif self.scheme == 'milstein':
+            wiener = wiener or VectorWienerWithI(problem.noiseterms)
+        else:
+            raise KeyError('Unknown scheme name: '+str(self.scheme))
+
+        step = self.get_step_function(problem)
+        optimal_dt = None
+        if self.adaptive:
+            optimal_dt = self.get_optimal_dt_function(problem)
+
+        return self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
+        
