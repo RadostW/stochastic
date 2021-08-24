@@ -213,7 +213,6 @@ class SDESolver:
             else:
                 wieners = [WienerWithZ() for _ in range(n_trajectories)]
 
-        t0 = time.time()
         step = self.get_step_function(problem)
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
@@ -323,48 +322,9 @@ class VectorSDESolver:
         optimal_dt = jax.jit(optimal_dt)
         return optimal_dt
                     
-    def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
-        '''
-        Produce one realisation of the process specified by ``problem``.
-
-        Parameters
-        ----------
-        problem : VectorSDEProblem
-             Vector stochastic differential equation together with bounary conditions.
-        wiener : VectorWiener, optional
-             Underlying Wiener processes supplying noise to the equation. Usefull when comparing several solvers or several equations on the same noise.
-
-        Returns
-        -------
-        dict
-            Dictionary containing 2 entries. Under key ``time_values`` a jnp.array of timestamps on which process was evaluated.
-            Under key ``solution_values`` a jnp.array of stochastic process values at corresponding time instances.
-
-        Example
-        -------
-        >>> import jax.numpy as jnp
-        >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: jnp.array([1,1]), lambda x: jnp.array([[1,0.5],[0.5,1]]), 2, 2, jnp.array([1.5,0.5]), 1)
-        >>> solver = pychastic.sde_solver.VectorSDESolver()
-        >>> solver.solve(problem)
-        {'time_values': array([0.,0.01,...]), 'solution_values' : array([[1.5, 0.5], [1.76, 0.71], [1.93, 0.91], ...])} #some values random
-
-        '''
-        if self.scheme == 'euler':
-            wiener = wiener or VectorWiener(problem.noiseterms)
-        elif self.scheme == 'commutative_milstein':
-            wiener = wiener or VectorWiener(problem.noiseterms)
-        elif self.scheme == 'milstein':
-            wiener = wiener or VectorWienerWithI(problem.noiseterms)
-        else:
-            raise KeyError('Unknown scheme name: '+str(self.scheme))
-
-        step = self.get_step_function(problem)
-        if self.adaptive:
-            optimal_dt = self.get_optimal_dt_function(problem)
-
-        dt = self.dt
+    def _solve_one_trajectory(self, jited_step_function, jited_dt_function, x0, dt, tmax, wiener):
         t = 0.0
-        x = problem.x0
+        x = x0
 
         # initialize "trajectories"
         time_values = [0.0]
@@ -372,7 +332,7 @@ class VectorSDESolver:
 
         while True:
             if self.adaptive:
-              dt = optimal_dt(x).item()
+              dt = jited_dt_function(x).item()
               dt = max(dt, self.min_dt)
               dt = min(dt, self.max_dt)
 
@@ -382,23 +342,52 @@ class VectorSDESolver:
             t += dt
 
             if self.scheme == 'euler':
-                x = step(x, dt, dw)
+                x = jited_step_function(x, dt, dw)
             elif self.scheme == 'commutative_milstein':
                 comm_noise = wiener.get_commuting_noise(t,t+dt)
-                x = step(x, dt, dw, comm_noise)
+                x = jited_step_function(x, dt, dw, comm_noise)
             elif self.scheme == 'milstein':
                 i = wiener.get_I_matrix(t, t+dt)
-                x = step(x, dt, dw, i)
+                x = jited_step_function(x, dt, dw, i)
             else:
                 raise ValueError
 
             solution_values.append(x)
             time_values.append(t)
 
-            if t >= problem.tmax:
+            if t >= tmax:
                 break
 
         return dict(
             time_values=jnp.array(np.array(time_values)),
             solution_values=jnp.array(np.array(solution_values))
         )
+
+    
+    def solve_many(self, problem: VectorSDEProblem, wieners=None, n_trajectories=None):
+        if wieners is not None and n_trajectories is not None:
+            raise ValueError("Set only one of `wieners` and `n_trajectories`")
+
+        if self.scheme in ['euler', 'commutative_milstein']:
+            if wieners:
+                assert all(isinstance(wiener, VectorWiener) and wiener.noiseterms == problem.noiseterms for wiener in wieners)
+            else:
+                wieners = [VectorWiener(problem.noiseterms) for _ in range(n_trajectories)]
+
+        elif self.scheme == 'milstein':
+            if wieners:
+                assert all(isinstance(wiener, VectorWienerWithI) and wiener.noiseterms == problem.noiseterms for wiener in wieners)
+            else:
+                wieners = [VectorWienerWithI(problem.noiseterms) for _ in range(n_trajectories)]
+        else:
+            raise KeyError('Unknown scheme name: '+str(self.scheme))
+
+        step = self.get_step_function(problem)
+        optimal_dt = None
+        if self.adaptive:
+            optimal_dt = self.get_optimal_dt_function(problem)
+
+        return [
+            self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
+            for wiener in wieners
+        ]
