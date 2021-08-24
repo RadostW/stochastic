@@ -627,6 +627,7 @@ class VectorWienerWithI:
 
 
 def f(p, Delta, dW, xi, mu, eta, zeta):
+    # not yet verified vectorization for VectorWienerWithI.ensure_sample_point
     rec = 1/jnp.arange(1, p+1) # 1/r vector
     rho = 1/12 - (rec**2).sum()/(2*jnp.pi**2)
 
