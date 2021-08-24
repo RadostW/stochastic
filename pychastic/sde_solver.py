@@ -199,6 +199,37 @@ class SDESolver:
         )
 
     def solve_many(self, problem: SDEProblem, wieners=None, n_trajectories=None):
+        '''
+        Produce many realisations of the process specified by ``problem``.
+
+        Parameters
+        ----------
+        problem : SDEProblem
+             Stochastic differential equation together with bounary conditions.
+        wieners : list(Wiener), optional
+             Underlying Wiener processes supplying noise to the equation. 
+             Usefull when comparing several solvers or several equations on the same noise. Cannot be used together with ``n_trajectories``
+        n_trajectories : int, optional
+             Number of realisations to generate. Cannot be used together with ``wieners``
+
+        Returns
+        -------
+        list(dict)
+            List of realisations, each a dictionary with following specification:
+            Dictionary containing 3 entries. Under key ``time_values`` a np.array of timestamps on which process was evaluated.
+            Under key ``solution_values`` a np.array of stochastic process values at corresponding time instances.
+            Under key ``wiener_values`` np.array of values of the underlying Wiener process realisation at coresponding time instances.
+
+        Example
+        -------
+        >>> problem = pychastic.sde_problem.SDEProblem(lambda x: 1.0,lambda x: -1.0,0.0,0.1)
+        >>> solver = pychastic.sde_solver.SDESolver()
+        >>> solver.solve_many(problem,n_trajectories=2)
+        [{'time_values': array([0.,0.01,...]), 'solution_values' : array([0.,0.0082,...]),'wiener_values' : array([0.,-0.0017,...])},
+        {'time_values': array([0.,0.01,...]), 'solution_values' : array([0.,-0.012,...]),'wiener_values' : array([0.,...])}] #some values random
+
+
+        '''
         if wieners is not None and n_trajectories is not None:
             raise ValueError("Set only one of `wieners` and `n_trajectories`")
 
