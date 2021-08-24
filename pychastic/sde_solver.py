@@ -149,13 +149,16 @@ class SDESolver:
             wiener = wiener or Wiener()
 
         step = self.get_step_function(problem)
+        optimal_dt = None
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
         
+        return self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
+
+    def _solve_one_trajectory(self, jited_step_function, jited_dt_function, x0, dt, tmax, wiener):
         # initialize values
-        dt = self.dt
         t = 0.0
-        x = problem.x0
+        x = x0
         w = 0.0
 
         # initialize "trajectories"
@@ -163,14 +166,12 @@ class SDESolver:
         solution_values = [x]
         wiener_values = [0.0]
                 
-        t0 = time.time()
         while True:
             # adapt step
             if self.adaptive:
-              dt = optimal_dt(x).item()
+              dt = jited_dt_function(x).item()
               dt = max(dt, self.min_dt)
               dt = min(dt, self.max_dt)
-              # print(f'x = {x}, t = {t}, dt = {dt}')
 
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
@@ -178,25 +179,48 @@ class SDESolver:
             if self.scheme == 'wagner_platen':
                 dz = wiener.get_z(t,t+dt)
                 print((x, dt, dw, dz))
-                x = step(x, dt, dw, dz)
+                x = jited_step_function(x, dt, dw, dz)
             else:
-                x = step(x, dt, dw)
+                x = jited_step_function(x, dt, dw)
 
             # update "trajectories"
             solution_values.append(x)            
             wiener_values.append(w)
             time_values.append(t)
 
-            if t >= problem.tmax:
+            if t >= tmax:
               break
-        main_loop_time_ms = (time.time()-t0)*1000
 
         return dict(
             time_values=np.array(time_values),
             solution_values=np.array(solution_values),
             wiener_values=np.array(wiener_values),
-            main_loop_time_ms = main_loop_time_ms
         )
+
+    def solve_many(self, problem: SDEProblem, wieners=None, n_trajectories=None):
+        if wieners is not None and n_trajectories is not None:
+            raise ValueError("Set only one of `wieners` and `n_trajectories`")
+
+        if self.scheme == 'wagner_platen':
+            if wieners:
+                assert all(isinstance(wiener, WienerWithZ) for wiener in wieners)
+            else:
+                wieners = [WienerWithZ() for _ in range(n_trajectories)]
+        else:
+            if wieners:
+                assert all(isinstance(wiener, Wiener) for wiener in wieners)
+            else:
+                wieners = [WienerWithZ() for _ in range(n_trajectories)]
+
+        t0 = time.time()
+        step = self.get_step_function(problem)
+        if self.adaptive:
+          optimal_dt = self.get_optimal_dt_function(problem)
+        
+        return [
+            self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
+            for wiener in wieners
+        ]
 
 class VectorSDESolver:
     '''
