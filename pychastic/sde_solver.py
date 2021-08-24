@@ -174,6 +174,9 @@ class SDESolver:
               dt = max(dt, self.min_dt)
               dt = min(dt, self.max_dt)
 
+            if t+dt > tmax:
+                dt = tmax-t
+                
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
             w += dw

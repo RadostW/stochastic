@@ -9,13 +9,13 @@ class Wiener:
     '''
     Class for sampling, and memorization of Wiener process.
     '''
-    def __init__(self):
+    def __init__(self, seed=None):
         self.sample_points = sortedcontainers.SortedDict()
         self.sample_points[0.] = {
             'w': 0.0,
             #'zToPrevPoint': 0.0
         }
-        self.normal_generator = normal()
+        self.normal_generator = normal(seed=seed)
 
     def get_w(self, t):
         '''
