@@ -2,6 +2,7 @@ import jax
 import time
 import jax.numpy as jnp
 import numpy as np
+from tqdm import tqdm
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
 from pychastic.wiener import VectorWienerWithI, Wiener
@@ -254,7 +255,7 @@ class SDESolver:
         
         return [
             self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
-            for wiener in wieners
+            for wiener in tqdm(wieners)
         ]
 
 class VectorSDESolver:
@@ -424,7 +425,7 @@ class VectorSDESolver:
 
         return [
             self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
-            for wiener in wieners
+            for wiener in tqdm(wieners)
         ]
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):
