@@ -2,6 +2,7 @@ import jax
 import time
 import jax.numpy as jnp
 import numpy as np
+from tqdm import tqdm
 from pychastic.sde_problem import SDEProblem
 from pychastic.sde_problem import VectorSDEProblem
 from pychastic.wiener import VectorWienerWithI, Wiener
@@ -174,6 +175,9 @@ class SDESolver:
               dt = max(dt, self.min_dt)
               dt = min(dt, self.max_dt)
 
+            if t+dt > tmax:
+                dt = tmax-t
+                
             t += dt
             dw = wiener.get_w(t+dt) - wiener.get_w(t)
             w += dw
@@ -245,12 +249,13 @@ class SDESolver:
                 wieners = [WienerWithZ() for _ in range(n_trajectories)]
 
         step = self.get_step_function(problem)
+        optimal_dt = None
         if self.adaptive:
           optimal_dt = self.get_optimal_dt_function(problem)
         
         return [
             self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
-            for wiener in wieners
+            for wiener in tqdm(wieners)
         ]
 
 class VectorSDESolver:
@@ -420,7 +425,7 @@ class VectorSDESolver:
 
         return [
             self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
-            for wiener in wieners
+            for wiener in tqdm(wieners)
         ]
 
     def solve(self, problem: VectorSDEProblem, wiener: VectorWiener = None):

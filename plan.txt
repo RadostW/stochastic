@@ -1,0 +1,26 @@
+porównaine naszych metod
+- error vs time, error vs steps
+
+pokazać że łatwo
+- zwięzłe przykłady: jakieś są
+
+optymalizacje
+- wiener bez pamięci
+
+póżniej
+- posprzątanie/refactor?
+- wiele trajektorii naraz (poprzez wektoryzację)
+- wiener który trochę pamięta
+- taylorowania zamiast ewaluacji funkcji
+
+czemu inne intefejsy do scalarnego i wektorowego solvera?
+- shape'y
+- wagnera platena nie umiemy w wektorowym przypadku
+
+---
+
+dict(
+        time_values=np.array(time_values),
+        solution_values=np.array(solution_values),
+        wiener_values=np.array(wiener_values),
+    )

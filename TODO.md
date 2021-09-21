@@ -24,3 +24,5 @@ export OMP_NUM_THREADS=1
 export USE_SIMPLE_THREADED_LEVEL3=1
 ```
 might help with `OpenBLAS blas_thread_init` error.
+
+to debug nans set envvar `JAX_DEBUG_NANS=True` or `from jax.config import config; config.update("jax_debug_nans", True)`
