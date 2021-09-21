@@ -16,6 +16,8 @@ class Wiener:
             #'zToPrevPoint': 0.0
         }
         self.normal_generator = normal(seed=seed)
+        self.t_max = 0
+        self.last_w = 0
 
     #@profile
     def get_w(self, t):
@@ -47,11 +49,13 @@ class Wiener:
         if t in self.sample_points:
             return self.sample_points[t]['w']
 
-        t_max = self.sample_points.keys()[-1] # TODO optimize
+        t_max = self.t_max
         if t > t_max:
             normal = next(self.normal_generator)
-            last_value = self.sample_points[t_max]['w']
-            self.sample_points[t] = {'w': last_value + np.sqrt(t-t_max)*normal}
+            next_w = self.last_w + np.sqrt(t-t_max)*normal
+            self.sample_points[t] = {'w': next_w}
+            self.t_max = t
+            self.last_w = next_w
 
         else:
             next_i = self.sample_points.bisect_left(t)
