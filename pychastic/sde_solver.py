@@ -183,7 +183,6 @@ class SDESolver:
             w += dw
             if self.scheme == 'wagner_platen':
                 dz = wiener.get_z(t,t+dt)
-                print((x, dt, dw, dz))
                 x = jited_step_function(x, dt, dw, dz)
             else:
                 x = jited_step_function(x, dt, dw)
