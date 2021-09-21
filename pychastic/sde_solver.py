@@ -157,6 +157,7 @@ class SDESolver:
         
         return self._solve_one_trajectory(step, optimal_dt, problem.x0, self.dt, problem.tmax, wiener)
 
+    #@profile
     def _solve_one_trajectory(self, jited_step_function, jited_dt_function, x0, dt, tmax, wiener):
         # initialize values
         t = 0.0
@@ -183,7 +184,6 @@ class SDESolver:
             w += dw
             if self.scheme == 'wagner_platen':
                 dz = wiener.get_z(t,t+dt)
-                print((x, dt, dw, dz))
                 x = jited_step_function(x, dt, dw, dz)
             else:
                 x = jited_step_function(x, dt, dw)
@@ -202,6 +202,7 @@ class SDESolver:
             wiener_values=np.array(wiener_values),
         )
 
+    #@profile
     def solve_many(self, problem: SDEProblem, wieners=None, n_trajectories=None):
         '''
         Produce many realisations of the process specified by ``problem``.
