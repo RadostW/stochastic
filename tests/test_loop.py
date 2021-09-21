@@ -1,41 +1,59 @@
-import pychastic                   # solving sde
-import pygrpy.jax_grpy_tensors     # hydrodynamic interactions
-import pywrithe                    # computing writhe of closed curve
-import jax.numpy as jnp            # jax array operations
-import jax                         # taking gradients
-import matplotlib.pyplot as plt    # plotting
-import numpy as np                 # post processing trajectory
-import math as ma                  # math.pi
-from tqdm import tqdm              # progess bar
+import pychastic                      # solving sde
+import pygrpy.jax_grpy_tensors        # hydrodynamic interactions
+import pywrithe                       # computing writhe of closed curve
+import jax.numpy as jnp               # jax array operations
+import jax                            # taking gradients
+import matplotlib.pyplot as plt       # plotting
+import numpy as np                    # post processing trajectory
+import math as ma                     # math.pi
+from tqdm import tqdm                 # progess bar
 
-radii = jnp.array([1.0 for x in range(40)]) # sizes of spheres we're using
-n_beads = len(radii)
-equilibrium_dist = 2.0
-spring_constant = 5.5
-bending_constant = 1.7 # 70 / (4 pi^2) (correct?) value for 40 beads and persistency = length
-twisting_constant = 0.1
-linking_number = 0.0
+from jax.config import config         # extra debug
+config.update("jax_debug_nans",True)  # throw on nans
+
+
+'''
+Model paramters to be set for simulation
+'''
+beam_length = 1.0                          # length of the filament
+beam_hydrodynamic_diameter = 28.4 / 1111.  # filament diameter (hydrodynamic)
+beam_steric_diameter = 20.0 / 1111.        # filament diameter (steric)
+n_beads = 40                               # number of beads modelling the filament
+kbT = 1.0                                  # fluctuation energy
+persistence_length = 500.0 / 1111.         # L_p = EI / kbT (500 angstroms)
+stretch_length = 0.037 / 1111.             # L_s = kbT / EA (0.037 angstroms)
+linking_number = 2.7                       # linking number of loop
+
+
+'''
+Resulting parameters computed from the above
+'''
+equilibirum_distance = beam_length / n_beads                                    # equilibirum of elongation springs
+spring_constant = kbT / (stretch_length * equilibirum_distance)                 # stiffness of elongation springs
+
+bending_constant = kbT * persistence_length * equilibirum_distance              # stiffness of bending springs
+twisting_constant = kbT * persistence_length * (2.0/3.0) * beam_length          # stiffness of twisting springs
+
+overlap_constant = 70.0 * kbT                                                   # stiffness of overlap springs
+overlap_distance = 0.6 * beam_steric_diameter                                   # smear width of overlap springs
+
+radii = jnp.array([(beam_hydrodynamic_diameter / 2.0) for x in range(n_beads)]) # hydrodynamic radii of beads
 
 def u_ene(x): # potential energy shape
      locations = jnp.reshape(x,(n_beads,3))
-     distances = jnp.sum((locations[1:]-locations[:-1])**(2.0),axis=1)**(0.5)
-     extension_ene = spring_constant*jnp.sum((distances - equilibrium_dist)**2)
+     distances = jnp.sum((locations-jnp.roll(locations,1,axis=0))**(2.0),axis=1)**(0.5)
+     extension_ene = spring_constant*0.5*jnp.sum((distances - equilibirum_distance)**2)
 
-     curvatures = jnp.sum((locations[2:]-2*locations[1:-1]+locations[:-2])**(2.0),axis=1)**(0.5)
-     bend_ene = bending_constant*jnp.sum(curvatures**2)
+     curvatures = jnp.sum((locations-2*jnp.roll(locations,1,axis=0)+jnp.roll(locations,2,axis=0))**(2.0),axis=1)**(0.5) / (equilibirum_distance**2)
+     bend_ene = bending_constant*0.5*jnp.sum(curvatures**2)
 
-     glue_ene = (
-          spring_constant*(jnp.sum((locations[-1]-locations[0])**2)**0.5-equilibrium_dist)**2
-        +
-          bending_constant*(
-            jnp.sum((locations[-2]-2*locations[-1]+locations[0])**2)**0.5
-          + jnp.sum((locations[-1]-2*locations[0]+locations[1])**2)**0.5
-          )**2
-        )
+     twist_ene = twisting_constant * 0.5 * (4.0*ma.pi*ma.pi) * (linking_number - pywrithe.writhe_jax(locations))**2
 
-     twist_ene = twisting_constant*(linking_number - pywrithe.writhe_jax(locations))**2
+     overlap_ene = overlap_constant * (0.5*jnp.sum(jnp.tanh(
+                                                (beam_steric_diameter**2-jnp.sum((locations[:,jnp.newaxis,:] - locations[jnp.newaxis,:,:])**2,axis=-1))/(overlap_distance**2)
+                                                )+1.0)-n_beads)
 
-     return extension_ene + bend_ene + glue_ene + twist_ene
+     return extension_ene + bend_ene + twist_ene + overlap_ene
 
 def drift(x):
      locations = jnp.reshape(x,(n_beads,3))
@@ -51,12 +69,14 @@ def noise(x):
 problem = pychastic.sde_problem.VectorSDEProblem(
       drift,
       noise,
-      x0 = jnp.reshape(jnp.array([[(n_beads/ma.pi)*ma.cos(2.0*ma.pi*x/n_beads),(n_beads/ma.pi)*ma.sin(2.0*ma.pi*x/n_beads),0.01*ma.sin(2.5*ma.pi*x/n_beads)] for x in range(n_beads)]),(3*n_beads,)), # four beads
+      x0 = (beam_length / (2.0*ma.pi))*jnp.reshape(jnp.array([
+                        [ma.cos(2.0*ma.pi*x/n_beads),ma.sin(2.0*ma.pi*x/n_beads),0.0] for x in range(n_beads)
+                      ]),(3*n_beads,)), 
       dimension = 3*n_beads,
       noiseterms = 3*n_beads,
-      tmax = 1.0)
+      tmax = 6000.0*10.0**(-6.0))
 
-solver = pychastic.sde_solver.VectorSDESolver(dt = 0.1)
+solver = pychastic.sde_solver.VectorSDESolver(dt = 0.1*10.0**(-6.0))
 trajectories = np.array([solver.solve(problem) for x in tqdm(range(1))])
 
 
