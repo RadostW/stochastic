@@ -6,8 +6,10 @@ class normal:
     self.n = 1
     self.buffer = np.array([])
 
+  #@profile
   def _sample_more(self):
-    self.buffer = np.concatenate([self.buffer, self.rng.normal(size=self.n)])
+    new_things = self.rng.normal(size=self.n)
+    self.buffer = np.concatenate([self.buffer, new_things])
     self.n *= 2
   
   #@profile

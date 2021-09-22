@@ -243,11 +243,11 @@ class SDESolver:
                 assert all(isinstance(wiener, WienerWithZ) for wiener in wieners)
             else:
                 wieners = [WienerWithZ() for _ in range(n_trajectories)]
-        else:
+        else: # not 'wagner_platen'
             if wieners:
                 assert all(isinstance(wiener, Wiener) for wiener in wieners)
             else:
-                wieners = [WienerWithZ() for _ in range(n_trajectories)]
+                wieners = [Wiener() for _ in range(n_trajectories)]
 
         step = self.get_step_function(problem)
         optimal_dt = None
@@ -366,6 +366,7 @@ class VectorSDESolver:
         # initialize "trajectories"
         time_values = [0.0]
         solution_values = [x]
+        wiener_values = [jnp.zeros(wiener.noiseterms)]
 
         while True:
             if self.adaptive:
@@ -391,13 +392,15 @@ class VectorSDESolver:
 
             solution_values.append(x)
             time_values.append(t)
+            wiener_values.append(w_next)
 
             if t >= tmax:
                 break
 
         return dict(
             time_values=jnp.array(np.array(time_values)),
-            solution_values=jnp.array(np.array(solution_values))
+            solution_values=jnp.array(np.array(solution_values)),
+            wiener_values=jnp.array(np.array(wiener_values))
         )
 
     

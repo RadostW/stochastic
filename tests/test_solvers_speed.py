@@ -19,5 +19,5 @@ solver = pychastic.sde_solver.SDESolver(adaptive=False,scheme='euler',dt=2**(-6)
 
 
 start = time.time()
-results = np.array(solver.solve_many(problem=problem,n_trajectories=4000))
+results = np.array(solver.solve_many(problem=problem,n_trajectories=8000))
 print(f'Time: {time.time()-start}')
