@@ -6,43 +6,52 @@ import numpy as np
 
 
 problem = KloedenPlaten4_27
+problem.tmax = 10
 
 def solvers():
-    dts = [0.01, 0.001]#, 0.0001]
-    rhos = [0.1, 0.01]
+    dts = np.exp(np.linspace(np.log(0.001), np.log(0.1), 10))
+    rhos = list()#[0.1, 0.01]
     
     for dt in dts:
-        yield SDESolver(adaptive=False, scheme='euler', dt=dt), {'name': f'Euler, dt={dt}', 'dt': dt, 'e_terms': 0, 'adaptive': False, 'scheme': 'euler'}
-        yield SDESolver(adaptive=False, scheme='milstein', dt=dt), {'name': f'Milstein, dt={dt}', 'dt': dt, 'e_terms': 0, 'adaptive': False, 'scheme': 'milstein'}
-
+        yield SDESolver(adaptive=False, scheme='euler', dt=dt), {'name': f'Euler', 'dt': dt, 'e_terms': 0, 'adaptive': False, 'scheme': 'euler'}
+        yield SDESolver(adaptive=False, scheme='milstein', dt=dt), {'name': f'Milstein', 'dt': dt, 'e_terms': 0, 'adaptive': False, 'scheme': 'milstein'}
+        continue
         for rho in rhos:         
-            yield SDESolver(adaptive=True, scheme='euler', dt=dt, target_mse_density=rho, error_terms=1), {'name': f'Euler ad, dt={dt}, eterms=1, rho={rho}', 'dt': dt, 'e_terms': 1, 'rho': rho, 'adaptive': True, 'scheme': 'euler'}
-            yield SDESolver(adaptive=True, scheme='euler', dt=dt, target_mse_density=rho, error_terms=2), {'name': f'Euler ad, dt={dt}, eterms=2, rho={rho}', 'dt': dt, 'e_terms': 2, 'rho': rho, 'adaptive': True, 'scheme': 'euler'}
-            yield SDESolver(adaptive=True, scheme='milstein', dt=dt, target_mse_density=rho, error_terms=1), {'name': f'Milstein ad, dt={dt}, eterms=1, rho={rho}', 'dt': dt, 'e_terms': 1, 'rho': rho, 'adaptive': True, 'scheme': 'milstein'}
+            yield SDESolver(adaptive=True, scheme='euler', dt=dt, target_mse_density=rho, error_terms=1), {'name': f'Euler ad, eterms=1, rho={rho}', 'dt': dt, 'e_terms': 1, 'rho': rho, 'adaptive': True, 'scheme': 'euler'}
+            yield SDESolver(adaptive=True, scheme='euler', dt=dt, target_mse_density=rho, error_terms=2), {'name': f'Euler ad, eterms=2, rho={rho}', 'dt': dt, 'e_terms': 2, 'rho': rho, 'adaptive': True, 'scheme': 'euler'}
+            yield SDESolver(adaptive=True, scheme='milstein', dt=dt, target_mse_density=rho, error_terms=1), {'name': f'Milstein ad, eterms=1, rho={rho}', 'dt': dt, 'e_terms': 1, 'rho': rho, 'adaptive': True, 'scheme': 'milstein'}
 
+solvers = list(solvers())
 import pandas as pd
 from tqdm import tqdm
 results = []
 
+file = open('trajs.txt', 'w')
+
 data = []
-n_repetitions = 2
-wieners = [pychastic.wiener.Wiener() for i in range(n_repetitions)]
-for solver, solver_params in tqdm(list(solvers())):
+n_repetitions = 50
+wieners = [pychastic.wiener.Wiener(seed=i) for i in range(n_repetitions)]
+for solver, solver_params in solvers:
+    del solver_params['dt']
     solutions = solver.solve_many(problem, wieners)
     for solution, wiener in zip(solutions, wieners):
+        
         t_end = solution['time_values'][-1]
-        assert np.isclose(t_end, problem.tmax)
+        assert np.isclose(t_end, problem.tmax)        
         end_value = solution['solution_values'][-1]
-        error = problem.exact_solution(problem.x0, problem.tmax, wiener.get_w(problem.tmax))
+
+        error = problem.exact_solution(problem.x0, problem.tmax, wiener.get_w(problem.tmax)) - end_value
+        mean_dt = problem.tmax / (len(solution['solution_values'])-1)
         data.append(dict(
             error=error,
-            mean_dt=problem.tmax / (len(solution['time_values'])-1),
+            mean_dt=mean_dt,
             **solver_params
         ))
-
-   
+        np.savetxt(file, solution['solution_values'], newline=' ')
+        file.write('\n')
+#file.close()
+  
 data = pd.DataFrame(data)
-print(data)
 data.to_csv('data.csv')
 exit()
 
