@@ -15,7 +15,7 @@ vectorized_fill_diagonal = jax.vmap(fill_diagonal, in_axes=(0, 0))
 
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     if noise_terms == 1 or scheme == 'euler':
-        dW_scaled = jax.random.normal(key, shape=(steps, 1))
+        dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
         dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
     
     elif scheme == 'milstein':
@@ -56,8 +56,8 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         raise NotImplementedError
 
     return {
-        'dW_scaled': dW_scaled,
-        'dI_scaled': dI_scaled
+        'd_w': dW_scaled,
+        'd_ww': dI_scaled
     }
 
 if __name__ == '__main__':
