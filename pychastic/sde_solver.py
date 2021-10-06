@@ -61,6 +61,43 @@ class VectorSDESolver:
         self.adaptive = adaptive
 
     def solve(self, problem: VectorSDEProblem):
+        """
+        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``VectorSDESolver`` object.
+
+        Parameters
+        ----------
+        problem : VectorSDEProblem
+            SDE problem to be solved.
+
+        Returns
+        -------
+        dict
+            Under following keys you'll find:
+            ``last_time`` -- time at last step of integration
+            ``last_value`` -- value at last step of integration
+            ``last_wiener`` -- value of underlying wiener process at last step of integration
+            ``trajectory`` -- a jnp.array containing entire trajectory of the process, each entry in the array consists of 3 elements (time, value, wieners).
+
+        Example
+        -------
+        >>> solver = VectorSDESolver()
+        >>> problem = pychastic.sde_problem.VectorSDEProblem(
+        ... lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
+        ... lambda x: jnp.array([
+        ...    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
+        ...    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+        ... ]),
+        ... dimension = 2,
+        ... noiseterms= 2,
+        ... x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
+        ... tmax=0.02
+        ... )
+        >>> solution = solver.solve(problem)
+        >>> (r,phi) = solution["last_value"]
+        >>> compare = {"integrated":r*jnp.array([jnp.cos(phi),jnp.sin(phi)]),"exact":solution["last_wiener"]+problem.x0}
+        >>> print(compare)
+            
+        """
 
         assert problem.x0.shape == problem.a(problem.x0).shape
         assert problem.x0.shape[0] == problem.b(problem.x0).shape[0]
@@ -97,7 +134,7 @@ class VectorSDESolver:
             return f
 
         def step(
-            x,
+            x_before,
             d_t,
             d_w,
             d_ww=jax.numpy.zeros((noise_terms, noise_terms)),
@@ -115,21 +152,23 @@ class VectorSDESolver:
             f_wt = L(id_, "wt")
             f_www = L(id_, "www")
 
-            x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
+            x_after = x_before
+
+            x_after += (f_t(x_before)*d_t).squeeze() + contract_all(f_w(x_before), d_w)
             if scheme == "euler":
-                return x
+                return x_after
 
-            x += contract_all(f_ww(x), d_ww)
+            x_after += contract_all(f_ww(x_before), d_ww)
             if scheme == "milstein":
-                return x
+                return x_after
 
-            x += (
-                contract_all(f_tw(x), d_tw)
-                + contract_all(f_wt(x), d_wt)
-                + contract_all(f_www(x), d_www)
+            x_after += (
+                contract_all(f_tw(x_before), d_tw)
+                + contract_all(f_wt(x_before), d_wt)
+                + contract_all(f_www(x_before), d_www)
             )
             if scheme == "wagner_platen":
-                return x
+                return x_after
 
         chunk_size = int(problem.tmax / self.dt) + 1
         seed = 0
@@ -150,20 +189,28 @@ class VectorSDESolver:
 
         t0 = 0.0
         w0 = jax.numpy.zeros(noise_terms)
-        result = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
-        return result
+        ((last_time,last_value,last_wiener),trajectory) = jax.lax.scan(jax.jit(scan_func), (t0, problem.x0, w0), wiener_integrals)
+        return {"last_time":last_time,"last_value":last_value,"last_wiener":last_wiener,"trajectory":trajectory}
 
-solver = VectorSDESolver()
-problem = pychastic.sde_problem.VectorSDEProblem(
-  lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
-  lambda x: jnp.array([
-    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
-    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
-  ]),
-  dimension = 2,
-  noiseterms= 2,
-  x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
-  tmax=1.0
-)
 
-solver.solve(problem)
+if __name__ == "__main__":
+    #from jax.config import config
+    #config.update('jax_disable_jit', True)
+
+    solver = VectorSDESolver(dt=2**(-19))
+    problem = pychastic.sde_problem.VectorSDEProblem(
+    lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
+    lambda x: jnp.array([
+        [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
+        [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+    ]),
+    dimension = 2,
+    noiseterms= 2,
+    x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
+    tmax=1.0
+    )
+
+    solution = solver.solve(problem)
+    (r,phi) = solution["last_value"]
+    compare = {"integrated":r*jnp.array([jnp.cos(phi),jnp.sin(phi)]),"exact":solution["last_wiener"]+problem.x0}
+    print(compare)
