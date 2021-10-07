@@ -60,7 +60,7 @@ class VectorSDESolver:
         self.target_mse_density = target_mse_density
         self.adaptive = adaptive
 
-    def solve(self, problem: VectorSDEProblem):
+    def solve(self, problem: VectorSDEProblem, seed = None):
         """
         Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``VectorSDESolver`` object.
 
@@ -68,6 +68,8 @@ class VectorSDESolver:
         ----------
         problem : VectorSDEProblem
             SDE problem to be solved.
+        seed : int, optional
+            value of seed for PRNG.
 
         Returns
         -------
@@ -171,7 +173,7 @@ class VectorSDESolver:
                 return x_after
 
         chunk_size = int(problem.tmax / self.dt) + 1
-        seed = 0
+        seed = 0 if seed is None else seed 
         key = jax.random.PRNGKey(seed)
         wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme='euler')
 
