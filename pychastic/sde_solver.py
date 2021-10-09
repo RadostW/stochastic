@@ -1,18 +1,16 @@
+from copy import deepcopy
 import jax
 import time
 import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
 from pychastic.sde_problem import SDEProblem
-from pychastic.sde_problem import VectorSDEProblem
-from pychastic.wiener import VectorWienerWithI, Wiener
-from pychastic.wiener import WienerWithZ
-from pychastic.wiener import VectorWiener
 import pychastic.utils
 import pychastic.wiener_integral_moments
 from functools import wraps
 import jax
 from pychastic.vectorized_I_generation import get_wiener_integrals
+import tqdm
 
 
 def contract_all(a, b):
@@ -27,7 +25,7 @@ def tensordot2(a, b):
     return jax.numpy.tensordot(a, b, axes=2)
 
 
-class VectorSDESolver:
+class SDESolver:
     """
     Produces realisations of stochastic process to ``solve`` method.
     Controls numerical integration features via attributes.
@@ -60,7 +58,7 @@ class VectorSDESolver:
         self.target_mse_density = target_mse_density
         self.adaptive = adaptive
 
-    def solve(self, problem: VectorSDEProblem):
+    def solve(self, problem: SDEProblem, seed=0):
 
         assert problem.x0.shape == problem.a(problem.x0).shape
         assert problem.x0.shape[0] == problem.b(problem.x0).shape[0]
@@ -115,27 +113,28 @@ class VectorSDESolver:
             f_wt = L(id_, "wt")
             f_www = L(id_, "www")
 
-            x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
+            new_x = x
+            new_x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
             if scheme == "euler":
-                return x
+                return new_x
 
-            x += contract_all(f_ww(x), d_ww)
+            new_x += contract_all(f_ww(x), d_ww)
             if scheme == "milstein":
-                return x
+                return new_x
 
-            x += (
+            new_x += (
                 contract_all(f_tw(x), d_tw)
                 + contract_all(f_wt(x), d_wt)
                 + contract_all(f_www(x), d_www)
             )
             if scheme == "wagner_platen":
-                return x
+                return new_x
 
         chunk_size = int(problem.tmax / self.dt) + 1
-        seed = 0
         key = jax.random.PRNGKey(seed)
         wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme='euler')
 
+        @jax.jit
         def scan_func(carry, input_):
             t, x, w = carry
             
@@ -150,20 +149,28 @@ class VectorSDESolver:
 
         t0 = 0.0
         w0 = jax.numpy.zeros(noise_terms)
-        result = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
-        return result
+        _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
+        
+        return dict(
+            time_values=time_values,
+            solution_values=solution_values,
+            wiener_values=wiener_values
+        )
 
-solver = VectorSDESolver()
-problem = pychastic.sde_problem.VectorSDEProblem(
-  lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
-  lambda x: jnp.array([
-    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
-    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
-  ]),
-  dimension = 2,
-  noiseterms= 2,
-  x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
-  tmax=1.0
-)
+    def solve_many(self, problem, n_trajectories=1):
+        return [self.solve(problem, seed=i) for i in tqdm.trange(n_trajectories)]
 
-solver.solve(problem)
+
+if __name__ == '__main__':
+    solver = SDESolver()
+    problem = pychastic.sde_problem.SDEProblem(
+    lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
+    lambda x: jnp.array([
+        [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
+        [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+    ]),
+    x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
+    tmax=1.0
+    )
+
+    solver.solve(problem)
