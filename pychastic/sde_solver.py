@@ -58,7 +58,7 @@ class SDESolver:
         self.target_mse_density = target_mse_density
         self.adaptive = adaptive
 
-    def solve(self, problem: SDEProblem, seed=0):
+    def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0):
 
         assert problem.x0.shape == problem.a(problem.x0).shape
         assert problem.x0.shape[0] == problem.b(problem.x0).shape[0]
@@ -132,9 +132,7 @@ class SDESolver:
 
         chunk_size = int(problem.tmax / self.dt) + 1
         key = jax.random.PRNGKey(seed)
-        wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme='euler')
-
-        @jax.jit
+        
         def scan_func(carry, input_):
             t, x, w = carry
             
@@ -143,34 +141,45 @@ class SDESolver:
             wiener_integrals['d_ww'] *= self.dt
             
             t += self.dt
-            x = step(x, d_t=self.dt, **wiener_integrals)
+            x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals)
             w += wiener_integrals['d_w']
             return (t, x, w), (t, x, w)
 
         t0 = 0.0
         w0 = jax.numpy.zeros(noise_terms)
-        _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
-        
-        return dict(
-            time_values=time_values,
-            solution_values=solution_values,
-            wiener_values=wiener_values
-        )
 
-    def solve_many(self, problem, n_trajectories=1):
-        return [self.solve(problem, seed=i) for i in tqdm.trange(n_trajectories)]
+        @jax.vmap
+        def get_solution(key):
+            wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme='euler')
+            _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
+            
+            return dict(
+                time_values=time_values,
+                solution_values=solution_values,
+                wiener_values=wiener_values
+            )
+
+        keys = jax.random.split(key, n_trajectories)
+        solutions = get_solution(keys)
+        return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]
+
+    def solve(self, problem, seed=0):
+        return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
 
 
 if __name__ == '__main__':
-    solver = SDESolver()
-    problem = pychastic.sde_problem.SDEProblem(
-    lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
-    lambda x: jnp.array([
-        [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
-        [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
-    ]),
-    x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
-    tmax=1.0
+    a = 1
+    b = 1
+    scalar_geometric_bm = SDEProblem(
+        a = lambda x: a*x,
+        b = lambda x: b*x,
+        x0 = 1.0,
+        tmax = 1.0,
+        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)   
     )
-
+    problem = scalar_geometric_bm
+    solver = SDESolver()
+    steps = 100
+    dt = problem.tmax / steps
+    solver.dt = dt
     solver.solve(problem)
