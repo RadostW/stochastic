@@ -66,6 +66,9 @@ class SDEProblem:
       if not x0.shape[0] == a(x0).shape[0] == b(x0).shape[0]:
         raise ValueError(f'Incosistent shapes: {x0.shape}, {a(x0).shape}, {b(x0).shape}')   
 
+      self.x0 = x0
+      self.a = a
+      self.b = b
       self.dimension, self.noise_terms = b(x0).shape   
 
     else:

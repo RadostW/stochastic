@@ -1,3 +1,4 @@
+from os import environ
 import jax
 import pytest
 from pychastic.sde_solver import SDESolver
@@ -23,17 +24,14 @@ scalar_arctan_problem = SDEProblem(
   exact_solution = lambda x0, t, w: np.arctan(a*w+np.tan(x0))
 )
 
-polar_random_walk_problem = SDEProblem(
-  
-)
-
 @pytest.mark.parametrize('solver,problem,steps,quantile_99', [
   (SDESolver(), scalar_geometric_bm, 2**7, 1),
-  (SDESolver(), scalar_arctan_problem, 2**7, 0.09),
   (SDESolver(scheme='milstein'), scalar_geometric_bm, 2**7, 0.24),
+  
+  (SDESolver(), scalar_arctan_problem, 2**7, 0.09),
   (SDESolver(scheme='milstein'), scalar_arctan_problem, 2**7, 0.008),
 ])
-def test_again_exact_solution(solver: SDESolver, problem, steps, quantile_99):
+def test_again_exact_solution_scalar(solver: SDESolver, problem, steps, quantile_99):
   solver.dt = problem.tmax / steps
 
   result = solver.solve(problem)
@@ -45,3 +43,30 @@ def test_again_exact_solution(solver: SDESolver, problem, steps, quantile_99):
   errors = (exact_values - solution_values)
   end_error = errors[-1]
   assert abs(end_error) < quantile_99  # .99 quantile
+
+polar_random_walk_problem = SDEProblem(
+  a = lambda x: jax.numpy.array([1/(2*x[0]),0]),       # [1/2r,0]
+  b = lambda x: jax.numpy.array([
+      [jax.numpy.cos(x[1]),jax.numpy.sin(x[1])],           # cos \phi,      sin \phi
+      [-jax.numpy.sin(x[1])/x[0],jax.numpy.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+  ]),
+  x0 = jax.numpy.array([1.0,0.0]), # r=1.0, \phi=0.0
+  tmax = 1.0
+)
+polar_random_walk_problem.to_cartesian = lambda x: jax.numpy.array([x[0]*jax.numpy.cos(x[1]), x[0]*jax.numpy.sin(x[1])])
+
+@pytest.mark.parametrize('solver,problem,steps,quantile_99', [
+  (SDESolver(), polar_random_walk_problem, 2**7, 1.08),
+  (SDESolver(scheme='milstein'), polar_random_walk_problem, 2**7, 1.2)
+])
+def test_again_exact_solution_vector(solver: SDESolver, problem, steps, quantile_99):
+  solver.dt = problem.tmax / steps
+
+  result = solver.solve(problem, seed=1)
+  time_values = result['time_values'].reshape(-1, 1)
+  solution_values = result['solution_values']
+  wiener_values = result['wiener_values']
+  
+  end_error = problem.to_cartesian(solution_values[-1]) - wiener_values[-1]
+  l2_end_error = (end_error**2).sum()**0.5
+  assert abs(l2_end_error) < quantile_99  # .99 quantile

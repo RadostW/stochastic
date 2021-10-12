@@ -169,7 +169,7 @@ class SDESolver:
             if scheme == "wagner_platen":
                 return new_x
 
-        chunk_size = int(problem.tmax / self.dt) + 1
+        chunk_size = int(problem.tmax / self.dt)
         key = jax.random.PRNGKey(seed)
         
         def scan_func(carry, input_):
@@ -189,7 +189,7 @@ class SDESolver:
 
         @jax.vmap
         def get_solution(key):
-            wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme='euler')
+            wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme=self.scheme)
             _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
             
             return dict(
