@@ -59,6 +59,45 @@ class SDESolver:
         self.adaptive = adaptive
 
     def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0):
+        """
+        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``VectorSDESolver`` object.
+
+        Parameters
+        ----------
+        problem : VectorSDEProblem
+            SDE problem to be solved.
+        seed : int, optional
+            value of seed for PRNG.
+
+        Returns
+        -------
+        dict
+            Under following keys you'll find:
+            ``last_time`` -- time at last step of integration
+            ``last_value`` -- value at last step of integration
+            ``last_wiener`` -- value of underlying wiener process at last step of integration
+            ``trajectory`` -- a jnp.array containing entire trajectory of the process, each entry in the array consists of 3 elements (time, value, wieners).
+
+        Example
+        -------
+        >>> solver = VectorSDESolver()
+        >>> problem = pychastic.sde_problem.VectorSDEProblem(
+        ... lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
+        ... lambda x: jnp.array([
+        ...    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
+        ...    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+        ... ]),
+        ... dimension = 2,
+        ... noiseterms= 2,
+        ... x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
+        ... tmax=0.02
+        ... )
+        >>> solution = solver.solve(problem)
+        >>> (r,phi) = solution["last_value"]
+        >>> compare = {"integrated":r*jnp.array([jnp.cos(phi),jnp.sin(phi)]),"exact":solution["last_wiener"]+problem.x0}
+        >>> print(compare)
+            
+        """
 
         assert problem.x0.shape == problem.a(problem.x0).shape
         assert problem.x0.shape[0] == problem.b(problem.x0).shape[0]
@@ -165,21 +204,3 @@ class SDESolver:
 
     def solve(self, problem, seed=0):
         return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
-
-
-if __name__ == '__main__':
-    a = 1
-    b = 1
-    scalar_geometric_bm = SDEProblem(
-        a = lambda x: a*x,
-        b = lambda x: b*x,
-        x0 = 1.0,
-        tmax = 1.0,
-        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)   
-    )
-    problem = scalar_geometric_bm
-    solver = SDESolver()
-    steps = 100
-    dt = problem.tmax / steps
-    solver.dt = dt
-    solver.solve(problem)
