@@ -55,9 +55,33 @@ polar_random_walk_problem = SDEProblem(
 )
 polar_random_walk_problem.to_cartesian = lambda x: jax.numpy.array([x[0]*jax.numpy.cos(x[1]), x[0]*jax.numpy.sin(x[1])])
 
+
+parabolic_random_walk_problem = SDEProblem(
+    lambda x: jax.numpy.array([
+        (x[0] - x[1]) / (2*(x[0]+x[1])**2),
+        (-x[0] + x[1]) / (2*(x[0]+x[1])**2)
+    ]),  
+    lambda x: jax.numpy.array([
+        [
+        1 / (2*x[0]+2*x[1]), x[1] / (x[0]+x[1])
+        ],           
+        [
+        -1 / (2*x[0]+2*x[1]), x[0] / (x[0]+x[1])
+        ] 
+    ]),
+    x0 = jax.numpy.array([1.0,0.0]), # u=1 , v=0
+    tmax=0.05
+    )
+
+parabolic_random_walk_problem.to_cartesian = lambda x: jax.numpy.array([x[0]**2 - x[1]**2, x[0]+x[1]])
+
+
 @pytest.mark.parametrize('solver,problem,steps,quantile_99', [
   (SDESolver(), polar_random_walk_problem, 2**7, 1.08),
-  (SDESolver(scheme='milstein'), polar_random_walk_problem, 2**7, 1.2)
+  (SDESolver(scheme='milstein'), polar_random_walk_problem, 2**7, 1.2),
+  
+  (SDESolver(), parabolic_random_walk_problem, 2**7, 0.025),
+  (SDESolver(scheme='milstein'), parabolic_random_walk_problem, 2**7, 0.002)
 ])
 def test_again_exact_solution_vector(solver: SDESolver, problem, steps, quantile_99):
   solver.dt = problem.tmax / steps
@@ -67,6 +91,6 @@ def test_again_exact_solution_vector(solver: SDESolver, problem, steps, quantile
   solution_values = result['solution_values']
   wiener_values = result['wiener_values']
   
-  end_error = problem.to_cartesian(solution_values[-1]) - wiener_values[-1]
+  end_error = problem.to_cartesian(solution_values[-1]) - (wiener_values[-1] + problem.to_cartesian(problem.x0)) 
   l2_end_error = (end_error**2).sum()**0.5
   assert abs(l2_end_error) < quantile_99  # .99 quantile

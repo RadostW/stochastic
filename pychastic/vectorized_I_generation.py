@@ -21,7 +21,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     elif scheme == 'milstein':
         key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
         xi = jax.random.normal(key1, shape=(steps, 1,noise_terms))
-        dW_scaled = jax.random.normal(key2, shape=(steps,noise_terms))
+        dW_scaled = xi.squeeze()#jax.random.normal(key2, shape=(steps,noise_terms))
 
         mu = jax.random.normal(key3, shape=(steps, 1,noise_terms))
 
