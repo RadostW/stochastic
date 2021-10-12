@@ -188,6 +188,7 @@ class SDESolver:
         w0 = jax.numpy.zeros(noise_terms)
 
         @jax.vmap
+        @jax.jit
         def get_solution(key):
             wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme=self.scheme)
             _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
@@ -204,3 +205,20 @@ class SDESolver:
 
     def solve(self, problem, seed=0):
         return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
+
+if __name__ == '__main__':
+    a = 1
+    b = 1
+    scalar_geometric_bm = SDEProblem(
+        a = lambda x: a*x,
+        b = lambda x: b*x,
+        x0 = 1.0,
+        tmax = 1.0,
+        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)   
+    )
+    problem = scalar_geometric_bm
+    solver = SDESolver()
+    steps = 100
+    dt = problem.tmax / steps
+    solver.dt = dt
+    solver.solve_many(problem, n_trajectories=1000)
