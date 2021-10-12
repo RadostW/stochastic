@@ -188,7 +188,6 @@ class SDESolver:
         w0 = jax.numpy.zeros(noise_terms)
 
         @jax.vmap
-        @jax.jit
         def get_solution(key):
             wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme=self.scheme)
             _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
@@ -201,7 +200,7 @@ class SDESolver:
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
-        return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]
+        return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]  # TODO: Radost make this quick
 
     def solve(self, problem, seed=0):
         return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
