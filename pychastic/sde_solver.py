@@ -200,7 +200,12 @@ class SDESolver:
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
-        return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]  # TODO: Radost make this quick
+        #return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]  # TODO: Radost make this quick
+
+        # Dis better. Cannot slice list(dict(list)), can slice dict(list(list)) in a sensible way.
+        # For example:
+        # >>> solution['solution_values'][:,-1]
+        return solutions
 
     def solve(self, problem, seed=0):
         return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
