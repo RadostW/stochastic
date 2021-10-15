@@ -1,5 +1,5 @@
-Getting started with Pychastic - derivatives pricing edition
-============================================================
+Pychastic for derivatives pricing
+=================================
 
 Introduction - why bother?
 ''''''''''''''''''''''''''

@@ -137,36 +137,8 @@ step being too large you can fix this by setting smaller timestep and better
 integration method either in ``SDESolver`` constructor or in ``solver.dt`` 
 later (but before calling solve!)
 
-.. prompt:: python >>> auto
-
-  >>> import pychastic
-  >>> import jax.numpy as np
-  >>> g = 2.0
-  >>> problem = pychastic.sde_problem.SDEProblem(
-      lambda x: (1.0 / x**2) - (1.0-1.0/x)*g,
-      lambda x: np.sqrt(2.0*(1.0-1.0/x)),
-      1.5,
-      5.0
-      )
-  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001, scheme = 'adaptive_milstein') # <-- selecting smaller step and better solver
-  >>> trajectory = solver.solve(problem)
-  >>> import matplotlib.pyplot as plt
-  >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
-  >>> plt.show()
-
-.. image:: brownian_near_wall_5times.png
-
-When you zoom in on regions where sphere gets close to the wall you can see that
-timestep decreases drastically, we're able to compute this trajectory in
-acceptable time without giving solver explicit information about domain of the 
-equation thanks to adaptive timestepping -- nice!
-
-.. image:: zoomin_close.png
-
 Generating many trajectories
 ''''''''''''''''''''''''''''
-
-##### TODO ###### Generating ensembles fast
 
 It's not uncommon that we're interested in a whole *ensemble* of trajectories.
 Because of jit optimization it's much faster to generate trajectories together
@@ -267,15 +239,13 @@ We can go ahead and code this equation in python.
     ...      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
     ...      return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
     ...
-    >>> problem = pychastic.sde_problem.VectorSDEProblem(
+    >>> problem = pychastic.sde_problem.SDEProblem(
     ...       drift,
     ...       noise,
     ...       x0 = jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(6,)),
-    ...       dimension = 6,
-    ...       noiseterms = 6,
     ...       tmax = 500.0)
 
-    >>> solver = pychastic.sde_solver.VectorSDESolver()
+    >>> solver = pychastic.sde_solver.SDESolver()
     >>> trajectory = solver.solve(problem) # takes about 10 seconds
 
     >>> plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
