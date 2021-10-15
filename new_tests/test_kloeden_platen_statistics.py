@@ -5,7 +5,7 @@ import jax.numpy as jnp
 
 def test_kp_exercise_9_3_3():
     a = 1.5
-    b = 1.0
+    b = 0.1
     problem = pychastic.sde_problem.SDEProblem(
         lambda x: a * x,
         lambda x: b * x,
@@ -47,7 +47,14 @@ def test_kp_exercise_9_3_3():
     mean_mean_error = np.mean(mean_error,axis=-1)
     std_mean_error = (2.0 / np.sqrt(n_rows))*np.std(mean_error,axis=-1)
 
+    rtol = 0.15
+    assert np.isclose(mean_mean_error[0], 0.280, rtol=rtol)
+    assert np.isclose(mean_mean_error[1], 0.140, rtol=rtol)
+    assert np.isclose(mean_mean_error[2], 0.076, rtol=rtol)
+    assert np.isclose(mean_mean_error[3], 0.039, rtol=rtol)
+
     for (dt, mu, sigma) in zip(dts,mean_mean_error,std_mean_error):
+        
         print(f"{dt:8.3} : {mu:5.3f}+-{sigma:5.3f}")
 
 
