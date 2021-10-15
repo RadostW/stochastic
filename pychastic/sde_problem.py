@@ -2,6 +2,9 @@ import jax
 import jax.numpy as jnp
 
 
+def _is_scalar(x):
+  return jax.numpy.isscalar(x) or x.ndim == 0
+
 class SDEProblem:
   '''
   Stores a vector stochastic differential equation of the form:
@@ -47,20 +50,13 @@ class SDEProblem:
         
     x0 = jnp.array(x0, dtype=jax.numpy.float32)
 
-    if x0.ndim == a(x0).ndim == b(x0).ndim == 0:
+    if all(_is_scalar(v) for v in [x0, a(x0), b(x0)]):
       self.x0 = x0.reshape(1)
-      # scalar case
-      if a(x0).ndim != 1:
-        new_a = lambda x: a(x).reshape(1)
-        # TODO warn about reshaping
-      if b(x0).ndim != 2:
-        new_b = lambda x: b(x).reshape(1, 1)
-        # TODO warn about reshaping
-      
+      # scalar case, TODO warn about inefficiency
+      self.a = lambda x: jax.numpy.array(a(x), ndmin=1)
+      self.b = lambda x: jax.numpy.array(b(x), ndmin=2)
       self.dimension = self.noise_terms = 1
-      self.a = new_a
-      self.b = new_b
-
+      
     elif x0.ndim == a(x0).ndim == 1 and b(x0).ndim == 2:
       # vector case
       if not x0.shape[0] == a(x0).shape[0] == b(x0).shape[0]:
@@ -77,7 +73,7 @@ class SDEProblem:
     
     # dtype validation
 
-    for val, key in [(x0, 'initial conditon'), (a(x0), 'drift term'), (b(x0), 'noise term')]:
+    for val, key in [(self.x0, 'initial conditon'), (self.a(x0), 'drift term'), (self.b(x0), 'noise term')]:
       if not isinstance(val, jnp.ndarray):
         raise ValueError(f"{key} should return jnp.array, not {type(val)}")
       if not jnp.issubdtype(x0.dtype, jnp.floating):
@@ -86,3 +82,5 @@ class SDEProblem:
     # exact solution validation
     # TODO
     self.exact_solution = exact_solution
+
+SDEProblem(lambda x: 1, lambda x: 2, 3, 4)
