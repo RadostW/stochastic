@@ -121,6 +121,8 @@ Simulating scalar SDEs
   >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
   >>> plt.show()
 
+#### TODO ##### improve example, add plot
+
 The ``SDEProblem`` constructor takes two callables (functions) as arguments. 
 First one decribes the drift term, second one describes the noise term. In 
 python you can define functions either by using ``def`` keyword or on-the-fly 
@@ -154,13 +156,16 @@ functions, but this ideally happens only once).
       lambda x: (1.0 / x**2) - (1.0-1.0/x)*g,
       lambda x: np.sqrt(2.0*(1.0-1.0/x)),
       1.5,
-      5.0
+      0.5
       )
-  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001, scheme = 'adaptive_milstein')
+  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001)
   >>> trajectories = solver.solve_many(problem,500)
   >>> import matplotlib.pyplot as plt
-  >>> plt.histogram(trajectories['solution_values'][:,-1])
+  >>> plt.hist(trajectories['solution_values'][:,-1].flatten())
   >>> plt.show()
+
+
+#### TODO ##### Improve example, add histogram and shaded plot with confidence bands and such.
 
 More degrees of freedom
 '''''''''''''''''''''''
@@ -261,6 +266,13 @@ on short timescales they stay together because they are connected by a spring.
 
 You're good to go! There are many options that control the integration precision
 and speed. You can choose different algorithms for integration as well.
+
+
+##### TODO #### Improve example. Add animation. Add shaded plot for location of small sphere.
+
+
+Further reading
+'''''''''''''''
 
 For comprehensive (600 page long) book on the topic try *Numerical Solution of
 Stochastic Differential Equations* P. Kloden & E. Platen; Springer (1992)
