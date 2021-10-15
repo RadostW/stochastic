@@ -1,22 +1,24 @@
 todo
-- results
-  - comparison of 1 dim euler/milstein fixed/adaptive
 - code
-  - higher order integrals in wiener instance
-  - tests for subsampling
-  - configure testing framework
-  - configure debugging framework
-  - interface for sampling multiple trajectories
-  - speed optimization
-  - add solve_many routine
+  - speed optimization for adaptive methods
+  - adaptive?
+  - docs
+
 - paper
-  - neat tables with schemes, coef. functions, integral covariances, optimal dt formulas
-  - comparison of 1 dim euler/milstein fixed/adaptive
+  - neat tables with schemes, etc.
+  - literature review
+  - speed comparison
+  - langevin
+  - briefly explain methods
+  - hydrodynamics brownian motion equations in ito form
+  - examples of use
+  - trajectories (ensembled)
+  - error vs time, error vs steps (adaptive case)
+  - hardware acceleration
+
 - package
-  [x] fix issues with requirements in pip
-  [x] configure `setup.py`
-  [x] decide on name
-  [x] readme
+  - [ ] readme
+
 
 Notes
 ```
@@ -24,3 +26,5 @@ export OMP_NUM_THREADS=1
 export USE_SIMPLE_THREADED_LEVEL3=1
 ```
 might help with `OpenBLAS blas_thread_init` error.
+
+to debug nans set envvar `JAX_DEBUG_NANS=True` or `from jax.config import config; config.update("jax_debug_nans", True)`

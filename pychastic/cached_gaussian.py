@@ -6,13 +6,17 @@ class normal:
     self.n = 1
     self.buffer = np.array([])
 
+  #@profile
   def _sample_more(self):
-    self.buffer = np.concatenate([self.buffer, self.rng.normal(size=self.n)])
+    new_things = self.rng.normal(size=self.n)
+    self.buffer = np.concatenate([self.buffer, new_things])
     self.n *= 2
   
-
+  #@profile
   def get_sample(self, size=1, n=None):
     '''
+    Return np.array of Gaussians of specified shape
+
     Parameters
     ----------
     size : int or tuple of integers
@@ -28,6 +32,8 @@ class normal:
 
   def get_number_of_samples(self, n):
     '''
+    Return np.array of Gaussians of specified length
+
     Parameters
     ----------
     n : int or tuple of integers
@@ -40,8 +46,20 @@ class normal:
     # return x.reshape(n) # slow :<
     return x
 
+  #@profile
+  def get_single_sample(self):
+    '''
+    Return a float
+    '''
+    if len(self.buffer) == 0:
+      self._sample_more()
+    x = self.buffer[0]
+    self.buffer = self.buffer[1:]
+    # return x.reshape(n) # slow :<
+    return x
+
   def __iter__(self):
     return self
   
   def __next__(self):
-      return self.get_sample(1).item()
+      return self.get_single_sample()

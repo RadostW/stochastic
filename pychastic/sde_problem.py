@@ -1,49 +1,8 @@
 import jax
-import numpy as np
 import jax.numpy as jnp
-from functools import wraps
-import pychastic.utils
+
 
 class SDEProblem:
-  '''
-  Stores a stochastic differential equation of the form:
-  :math:`dX = a(X) dt + b(X) dW`, where ``a`` and ``b`` are
-  (possibly positionally dependent) drift and noise coefficients.
-
-  Parameters
-  ----------
-  a : callable
-      Function describing drift term of the equation
-  b : callable
-      Function describing noise term of the equation
-  x0 : float
-      Initial value of the stochastic process
-  tmax : float
-      Time at which integration should stop
-  exact_solution : callable, optional
-      Exact solution of the SDE for comparing accuracies. If function ``f`` 
-      is passed as exact solution it should satisty ``[X(t1),X(t2),...] = f(x0, [t1,t2,t3], [W(t1),W(t2),...])`` 
-      where W is value of the underlying Wiener process forcing the equation
-
-  Example
-  -------
-
-  >>> problem = pychastic.sde_problem.SDEProblem(lambda x: 1.0,lambda x: -1.0,0.0,0.1)
-
-  '''
-  def __init__(self, a, b, x0, tmax, exact_solution=None):
-    self.a = a
-    self.b = b
-    self.tmax = tmax
-    self.x0 = x0
-    self.exact_solution = exact_solution
-
-    self.ap = jax.grad(a)
-    self.bp = jax.grad(b)
-    self.app = jax.grad(self.ap)
-    self.bpp = jax.grad(self.bp)
-
-class VectorSDEProblem:
   '''
   Stores a vector stochastic differential equation of the form:
   :math:`d\\mathbf{x} = \\mathbf{a(x)} dt + \\mathbf{B(x)} d\\mathbf{w}`, where
@@ -78,43 +37,52 @@ class VectorSDEProblem:
   >>> problem = pychastic.sde_problem.VectorSDEProblem(lambda x: np.array([1,1]), lambda x: np.array([[1,0.5],[0.5,1]]), 2, 2, np.array([1.5,0.5]), 1)
 
   '''
-  def __init__(self, a, b, dimension, noiseterms, x0, tmax):
-    self.a = a
-    self.b = b
-    self.dimension = dimension
-    self.noiseterms = noiseterms
-    self.x0 = x0
-    self.tmax = tmax
-
-    tmpa = a(x0)
-    tmpb = b(x0)
-
-    assert isinstance(x0, jnp.ndarray) , 'Initial condition should return jnp.array'
-    assert jnp.issubdtype(x0.dtype, jnp.floating) , f'Initial condition should be array of floats, not {x0.dtype}.'
-    assert x0.shape == (dimension,) , f'Initial condition should be array of shape (dimension,) == {(self.dimension,)}, not {x0.shape}'
-
-    assert isinstance(tmpa, jnp.ndarray) , 'Drift term should return jnp.array'
-    assert jnp.issubdtype(tmpa.dtype, jnp.floating) , f'Drift term should be array of floats, not {tmpa.dtype}.'
-    assert tmpa.shape == (dimension,) , f'Drift term should be array of shape (dimension,) == {(self.dimension,)}, not {tmpa.shape}'
-
-    assert isinstance(tmpb, jnp.ndarray) , 'Noise term should return jnp.array'
-    assert jnp.issubdtype(tmpb.dtype, jnp.floating) , f'Noise term should be array of floats, not {tmpb.dtype}.'
-    assert tmpb.shape == (dimension,noiseterms) , f'Noise term should be array of shape (dimension, noiseterms) == {(self.dimension,self.noiseterms)}, not {tmpb.shape}'
+  def __init__(self, a, b, x0, tmax, exact_solution=None):
     
+    if not tmax > 0:
+      raise ValueError(f'tmax has to bo posiitve, not {tmax}')
+    self.tmax = tmax
+    
+    # dimension & shape validation
+        
+    x0 = jnp.array(x0, dtype=jax.numpy.float32)
 
-    self.ap = jax.jacfwd(a)
-    self.bp = jax.jacfwd(b)
+    if x0.ndim == a(x0).ndim == b(x0).ndim == 0:
+      self.x0 = x0.reshape(1)
+      # scalar case
+      if a(x0).ndim != 1:
+        new_a = lambda x: a(x).reshape(1)
+        # TODO warn about reshaping
+      if b(x0).ndim != 2:
+        new_b = lambda x: b(x).reshape(1, 1)
+        # TODO warn about reshaping
+      
+      self.dimension = self.noise_terms = 1
+      self.a = new_a
+      self.b = new_b
 
-  def L0(self, f):
-    @wraps(f)
-    def wrapped(x):
-      b_val = self.b(x)
-      return pychastic.utils.contract_all(jax.jacobian(f)(x), self.a(x)) + 0.5*pychastic.utils.contract_all(jax.hessian(f)(x), b_val@b_val.T)
-    return wrapped
-  
-  def L1(self, f):
-    @wraps(f)
-    def wrapped(x):
-      return jax.jacobian(f)(x)@self.b(x)
-    return wrapped
+    elif x0.ndim == a(x0).ndim == 1 and b(x0).ndim == 2:
+      # vector case
+      if not x0.shape[0] == a(x0).shape[0] == b(x0).shape[0]:
+        raise ValueError(f'Incosistent shapes: {x0.shape}, {a(x0).shape}, {b(x0).shape}')   
 
+      self.x0 = x0
+      self.a = a
+      self.b = b
+      self.dimension, self.noise_terms = b(x0).shape   
+
+    else:
+      raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a(x0).shape}, {b(x0).shape}')
+      
+    
+    # dtype validation
+
+    for val, key in [(x0, 'initial conditon'), (a(x0), 'drift term'), (b(x0), 'noise term')]:
+      if not isinstance(val, jnp.ndarray):
+        raise ValueError(f"{key} should return jnp.array, not {type(val)}")
+      if not jnp.issubdtype(x0.dtype, jnp.floating):
+        raise ValueError(f"{key} dtype should be float, not {val.dtype}.")
+
+    # exact solution validation
+    # TODO
+    self.exact_solution = exact_solution

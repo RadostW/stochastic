@@ -9,14 +9,17 @@ class Wiener:
     '''
     Class for sampling, and memorization of Wiener process.
     '''
-    def __init__(self):
+    def __init__(self, seed=None):
         self.sample_points = sortedcontainers.SortedDict()
         self.sample_points[0.] = {
             'w': 0.0,
             #'zToPrevPoint': 0.0
         }
-        self.normal_generator = normal()
+        self.normal_generator = normal(seed=seed)
+        self.t_max = 0
+        self.last_w = 0
 
+    #@profile
     def get_w(self, t):
         '''
         Get value of Wiener probess at specified timestamp.
@@ -46,9 +49,13 @@ class Wiener:
         if t in self.sample_points:
             return self.sample_points[t]['w']
 
-        t_max = self.sample_points.keys()[-1]
+        t_max = self.t_max
         if t > t_max:
-            self.sample_points[t] = {'w': self.sample_points[t_max]['w'] + np.sqrt(t-t_max)*next(self.normal_generator)}
+            normal = next(self.normal_generator)
+            next_w = self.last_w + np.sqrt(t-t_max)*normal
+            self.sample_points[t] = {'w': next_w}
+            self.t_max = t
+            self.last_w = next_w
 
         else:
             next_i = self.sample_points.bisect_left(t)
@@ -71,13 +78,13 @@ class WienerWithZ:
     '''
     Class for sampling, and memorization of Wiener process and first nontrivial Stochastic integral.
     '''
-    def __init__(self):
+    def __init__(self,seed=None):
         self.sample_points = sortedcontainers.SortedDict()
         self.sample_points[0.] = {
             'w': 0.0,
             'zToPrevPoint': 0.0
         }
-        self.normal_generator = normal()
+        self.normal_generator = normal(seed=seed)
 
     def get_w(self,t):
         '''
