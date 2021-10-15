@@ -115,15 +115,13 @@ volitaility value in the second component of our solution vector ``x[1]``.
   >>> import pychastic
   >>> import jax.numpy as jnp
   >>> theta = 0.1; omega = 0.05; xi = 0.1; mu = 0.01
-  >>> problem = pychastic.sde_problem.VectorSDEProblem(
+  >>> problem = pychastic.sde_problem.SDEProblem(
         lambda x: jnp.array([mu, theta*(omega - x[1])]),
         lambda x: jnp.array([[jnp.sqrt(x[1])*x[0],0],[0,xi * x[1]]]),
-        dimension = 2,
-        noiseterms = 2,
         x0 = jnp.array([100.0,0.05]),
         tmax = 2.0
         )
-  >>> solver = pychastic.sde_solver.VectorSDESolver()
+  >>> solver = pychastic.sde_solver.SDESolver()
   >>> trajectory = solver.solve(problem)
   >>> import matplotlib.pyplot as plt
   >>> fig, axs = plt.subplots(2)
@@ -150,24 +148,23 @@ rather than one at a time. Method ``solve_many`` is just what we need here.
 .. prompt:: python >>> auto
 
   >>> import pychastic
+  >>> import jax.numpy as jnp
   >>> theta = 0.1; omega = 0.05; xi = 0.1; mu = 0.01
-  >>> problem = pychastic.sde_problem.VectorSDEProblem(
-        lambda x: [mu, theta*(omega - x[1])],
-        lambda x: [[np.sqrt(x[1])*x[0],0],[0,xi * x[1]]],
-        dimension = 2,
-        noiseterms = 2,
+  >>> problem = pychastic.sde_problem.SDEProblem(
+        lambda x: jnp.array([mu, theta*(omega - x[1])]),
+        lambda x: jnp.array([[jnp.sqrt(x[1])*x[0],0],[0,xi * x[1]]]),
         x0 = [100.0,0.05],
         tmax = 2.0
         )
-  >>> solver = pychastic.sde_solver.VectorSDESolver()
+  >>> solver = pychastic.sde_solver.SDESolver()
   >>> n_traj = 100 # number of monte-carlo runs
   >>> trajectory = solver.solve_many(problem,n_traj)
-  >>> final_values = trajectory[:,[-1],[0]] # [all trajectories, last timestamp, stock value]
+  >>> final_values = trajectory['solution_values'][:,-1]
   >>> strike = 120.0
-  >>> call_payouts = np.maximum(final_values - strike,np.zeros_like(final_values)) # max(S-K,0)
-  >>> call_pricing = np.mean(call_payouts)
+  >>> call_payouts = jnp.maximum(final_values - strike,jnp.zeros_like(final_values)) # max(S-K,0)
+  >>> call_pricing = jnp.mean(call_payouts)
   >>> call_pricing
-  5.213 ###### TODO ####### actually compute something
+  3.76
 
 If you change ``n_traj`` from ``100`` to ``1000`` you'll notice that computation
 time increased only a litle bit, not 10 fold. This is because of ``jit`` 
