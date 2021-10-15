@@ -8,60 +8,68 @@ from pychastic.wiener import VectorWienerWithI
 import random
 import numpy as np
 
+from pychastic.vectorized_I_generation import get_wiener_integrals
+import jax
 
-random.seed(0)
-np.random.seed(0)
+key = jax.random.PRNGKey(seed=0)
+n = 1000
+noise_terms = 2
+wiener_integrals = get_wiener_integrals(key, steps=n, noise_terms=2, scheme='milstein')
 
-class TestWiener(unittest.TestCase):
-    def test_sampling_persistent(self):
-        w = Wiener()
 
-        w_first_try = w.get_w(float(7))
+def test_increment_variance():
+  dw1, dw2 = wiener_integrals['d_w'].T
+  assert abs(dw1.var() - 1) < 5/jax.numpy.sqrt(n)
+  assert abs((dw1*dw2).mean()) < 5/jax.numpy.sqrt(n)
+  
+  dw1w1 = wiener_integrals['d_ww'][:, 0, 0]
+  dw1w2 = wiener_integrals['d_ww'][:, 0, 1]
+  dw2w1 = wiener_integrals['d_ww'][:, 1, 0]
+  dw2w2 = wiener_integrals['d_ww'][:, 1, 1]
 
-        T = 1000
-        points = list(range(T))
+  assert abs(dw1w2.mean()) < 5/jax.numpy.sqrt(n)
+  assert abs((dw1w2**2).mean() - 0.5) < 5/jax.numpy.sqrt(n)
+  assert abs((dw1w2*dw2w1).mean()) < 5/jax.numpy.sqrt(n)
+  assert jax.numpy.isclose(dw1w2 + dw2w1, dw1 * dw2, atol=1e-6).all()
+  
+  """
+  E(I_12) = 0, E(I_12 ^2) = h^2 / 2
+  E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
+  I_12 + I_21 = I_1 * I_2
 
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
+  return #unfinished test below
+  w = VectorWiener(noiseterms=2)
+  T = 100
+  points = list(range(T))
+  for t in points:
+      w.get_w(float(t))
+  
+  dw_list = []
+  for t in range(T):
+      dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+  dw_list = np.array(dw_list)
+  """
+  
 
-        w_second_try = w.get_w(float(7))
+'''
+    var = np.var(np.array(dw_list))
 
-        self.assertEqual( w_first_try , w_second_try, 'Wiener value changed between samplings')
+    self.assertAlmostEqual( var , 1 , delta=5.0/np.sqrt(T), 
+            msg = f'Variance of Wiener increments incorrect: {var}')
 
-    def test_increment_variance(self):
-        w = Wiener()
-        T = 100
-        points = list(range(T))
+    # add points in order
+    dt = 0.01
+    np.arange(0, T, dt)
+    values = [w.get_w(t) for t in points]
 
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
+    dw_list = []
+    for t in np.arange(0, T, dt):
+        dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
 
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+    var = np.var(dw_list)
 
-        var = np.var(np.array(dw_list))
-
-        self.assertAlmostEqual( var , 1 , delta=5.0/np.sqrt(T), 
-               msg = f'Variance of Wiener increments incorrect: {var}')
-
-        # add points in order
-        dt = 0.01
-        np.arange(0, T, dt)
-        values = [w.get_w(t) for t in points]
-
-        dw_list = []
-        for t in np.arange(0, T, dt):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-
-        var = np.var(dw_list)
-
-        self.assertAlmostEqual( var , dt , delta=5.0*np.sqrt(len(np.arange(0, T, dt))), 
-               msg = f'Variance of Wiener increments incorrect: {var}')
+    self.assertAlmostEqual( var , dt , delta=5.0*np.sqrt(len(np.arange(0, T, dt))), 
+            msg = f'Variance of Wiener increments incorrect: {var}')
 
     def test_autocovariance(self):
         w = Wiener()
@@ -239,11 +247,11 @@ class TestWienerWithZ(unittest.TestCase):
 
 
     def test_vector_double_integrals(self):
-        '''
+        """
         E(I_12) = 0, E(I_12 ^2) = h^2 / 2
         E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
         I_12 + I_21 = I_1 * I_2
-        '''
+        """
         return #unfinished test below
         #w = VectorWiener(noiseterms=2)
         #T = 100
@@ -291,3 +299,4 @@ class TestVectorWienerWithI(unittest.TestCase):
 if __name__ == '__main__':
     #np.random.seed(0)
     unittest.main()
+'''
