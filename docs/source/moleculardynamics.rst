@@ -12,6 +12,15 @@ ways of dealing with it -- explicit solvent and bigger supercomputer or implicit
 solvent and often lack of hydrodynamic interactions. In either case estimating
 diffusive properties of molecules is near impossible.
 
+.. figure:: dna_shaking_small.gif
+   :scale: 50 %
+   :alt: Small DNA loop undergoing Brownian dynamics
+
+   About 0.5 milisecond of Brownian motion of twisted DNA loop of length 1000 angstroms.
+
+   (Note **milisecond** not **microsecond** like in typical MD simulations).
+
+
 Here SDEs come to rescue -- correct formulation of overdamped dynamics reduces
 order of ODEs to first order with stochastic noise removing shortest timescale
 from the simulations. Additionaly in Stokesian regime hydrodynamic interactions
