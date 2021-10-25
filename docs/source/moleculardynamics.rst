@@ -212,7 +212,18 @@ last term including diverngence vanishes.
 
 For now we'll simulate two beads connected by a spring of rest length `4.0`. 
 We'll work in natural units where energy is measured in multiples of :math:`k_bT`
-and distances in multiples of sphere's radii.
+and distances in multiples of sphere's radii. This convention can be summarised with
+the following table.
+
+======== ===============================
+Quantity Scale (measured as multiple of)
+======== ===============================
+Distance :math:`L`
+Time     :math:`\eta L^3 / k_b T`
+Energy   :math:`k_b T`
+Force    :math:`k_b T / L`
+======== ===============================
+
 
 We can go ahead and code this equation in python.
 
