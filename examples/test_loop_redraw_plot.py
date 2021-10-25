@@ -23,7 +23,7 @@ kbT = 1.0                                  # fluctuation energy
 persistence_length = 500.0 / 1111.         # L_p = EI / kbT (500 angstroms)
 #stretch_length = 0.037 / 1111.            # L_s = kbT / EA (0.037 angstroms)
 stretch_length = 3.0 / 1111.               # CHANGED VALUE
-linking_number = 3.5                       # linking number of loop
+linking_number = 5.5                       # linking number of loop
 
 
 '''
@@ -73,41 +73,37 @@ def noise(x):
      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
      return jnp.sqrt(2*kbT)*jnp.linalg.cholesky(mu)
 
-problem = pychastic.sde_problem.SDEProblem(
-      drift,
-      noise,
-      x0 = (beam_length / (2.0*ma.pi))*jnp.reshape(jnp.array([
-                        [1.1*ma.cos(2.0*ma.pi*x/n_beads),0.9*ma.sin(2.0*ma.pi*x/n_beads),0.05*ma.sin(4.0*ma.pi*x/n_beads)] for x in range(n_beads)
-                      ]),(3*n_beads,)), 
-      #dimension = 3*n_beads,
-      #noiseterms = 3*n_beads,
-      tmax = 6000.0*10.0**(-6.0))
+#problem = pychastic.sde_problem.SDEProblem(
+#      drift,
+#      noise,
+#      x0 = (beam_length / (2.0*ma.pi))*jnp.reshape(jnp.array([
+#                        [1.1*ma.cos(2.0*ma.pi*x/n_beads),0.9*ma.sin(2.0*ma.pi*x/n_beads),0.05*ma.sin(4.0*ma.pi*x/n_beads)] for x in range(n_beads)
+#                      ]),(3*n_beads,)), 
+#      #dimension = 3*n_beads,
+#      #noiseterms = 3*n_beads,
+#      tmax = 6000.0*10.0**(-6.0))
 
-solver = pychastic.sde_solver.SDESolver(dt = 0.05*10.0**(-6.0))
-solutions = solver.solve_many(problem,1)
-
-trajectories = solutions['solution_values']
-writhes = jnp.array([jax.lax.map(loop_writhe,trajectory) for trajectory in trajectories])
-plt.plot(solutions['time_values'][0],writhes.transpose())
-#plt.show()
-
-
-#trajectories = np.array([solver.solve(problem) for x in tqdm(range(1))])
+#solver = pychastic.sde_solver.SDESolver(dt = 0.05*10.0**(-6.0))
+#solutions = solver.solve_many(problem,1)
 
 
 #
 # plotting
 #
 
+trajectory = np.loadtxt('data_loop.csv', delimiter = ',')
+writhes = jax.lax.map(loop_writhe,trajectory)
+plt.plot(writhes)
+
 #trajectory = trajectories[0]
+#trajectory = {'solution_values' : np.loadtxt('data_loop.csv', delimiter = ','), 'time_values' : np.arange(0,tmax,0.05*10.0**(-6.0))}
 #plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
 #plt.plot(trajectory['time_values'],trajectory['solution_values'][:,3])
 
-#trajectory = trajectories[0]
+
 #plt.plot(trajectory['solution_values'][:,0],trajectory['solution_values'][:,1])
 #plt.plot(trajectory['solution_values'][:,9],trajectory['solution_values'][:,10])
-np.savetxt('data_loop.csv', solutions['solution_values'][0], delimiter=',')
-plt.show()
+#np.savetxt('data_loop.csv', trajectory['solution_values'], delimiter=',')
 
 #sol =  np.array([x['solution_values'] for x in trajectories]);
 #plt.plot(trajectories[0]['time_values'],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,0:3]-sol[:,0,np.newaxis,0:3])**2,axis=2),axis=0),label='First, big bead') # big bead
@@ -118,5 +114,5 @@ plt.show()
 #plt.ylabel(r"Mean square displacement ($\mathbb{E}|q|^2$)")
 #plt.legend()
 
-#plt.show()
+plt.show()
 
