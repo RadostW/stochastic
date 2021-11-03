@@ -75,7 +75,7 @@ class SDEProblem:
       self.x0 = x0
       self.a = a
       self.b = b
-      self.dimension, self.noise_terms = b_x0_shape[1]
+      self.dimension, self.noise_terms = b_x0_shape
 
     else:
       raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a_x0_shape}, {b_x0_shape}')
