@@ -181,8 +181,10 @@ class SDESolver:
                 return new_x
 
         steps_needed = int(problem.tmax / self.dt)
+        tmp = chunks_per_randomization or 1
         chunk_size = chunk_size or steps_needed
-        number_of_chunks = (steps_needed // chunk_size) + (1 if steps_needed % chunk_size else 0)
+        number_of_chunks = ((steps_needed // (chunk_size*tmp)) + (1 if steps_needed % (chunk_size*tmp) else 0))*tmp
+        chunks_per_randomization = chunks_per_randomization or number_of_chunks
 
         key = jax.random.PRNGKey(seed)
         
@@ -216,21 +218,33 @@ class SDESolver:
             z = jax.lax.scan( scan_func , chunk_start , wieners_chunk )[0] #discard trajectory at chunk resolution
             return z, z
 
-        @jax.vmap
-        def get_solution(key):
-            wiener_integrals = get_wiener_integrals(key, steps=chunk_size*number_of_chunks, noise_terms=noise_terms, scheme=self.scheme)    
+        def get_solution_fragment(starting_state,key):
+            wiener_integrals = get_wiener_integrals(key, steps=chunk_size*chunks_per_randomization, noise_terms=noise_terms, scheme=self.scheme)    
 
-            _, (time_values, solution_values, wiener_values) = jax.lax.scan( 
+            last_state , (time_values, solution_values, wiener_values) = jax.lax.scan( 
                 chunk_function, 
-                (t0, problem.x0, w0),
+                starting_state,
                 jax.tree_map(lambda x: jnp.reshape(x,(-1,chunk_size)+x.shape[1:]), wiener_integrals)
             ) #discard carry, remember trajectory
             
-            return dict(
-                time_values=time_values,
-                solution_values=solution_values,
-                wiener_values=wiener_values
-            )
+            return (
+                    last_state,
+                    dict(
+                    time_values=time_values,
+                    solution_values=solution_values,
+                    wiener_values=wiener_values,
+                    )
+                   )
+
+        @jax.vmap
+        def get_solution(key):
+            _ , chunked_solution = jax.lax.scan(
+                lambda state, key: get_solution_fragment(state,key),
+                (t0,problem.x0,w0),
+                jax.random.split(key, number_of_chunks // chunks_per_randomization)
+                )
+
+            return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
