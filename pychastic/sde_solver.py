@@ -208,7 +208,9 @@ class SDESolver:
         return solutions
 
     def solve(self, problem, seed=0):
-        return self.solve_many(problem, n_trajectories=1, seed=seed)[0]
+        solution = self.solve_many(problem, n_trajectories=1, seed=seed)
+        solution = jax.tree_map(lambda x: x[0], solution)
+        return solution
 
 if __name__ == '__main__':
     a = 1

@@ -2,6 +2,9 @@ import jax
 import jax.numpy as jnp
 
 
+def _is_scalar(x):
+  return jax.numpy.isscalar(x) or x.ndim == 0
+
 class SDEProblem:
   '''
   Stores a vector stochastic differential equation of the form:
@@ -89,3 +92,5 @@ class SDEProblem:
     # exact solution validation
     # TODO
     self.exact_solution = exact_solution
+
+SDEProblem(lambda x: 1, lambda x: 2, 3, 4)

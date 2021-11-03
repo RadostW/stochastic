@@ -52,6 +52,20 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         dI_scaled = vectorized_fill_diagonal(
             Imat_nodiag, 0.5 * (xi ** 2 - 1).squeeze()
         )  # Diagonal entries work differently
+    
+    elif scheme == 'wagner_platen':
+        if noise_terms == 1:
+            pass
+            #tmpU1 = next(self.normal_generator)
+            #tmpU2 = next(self.normal_generator)
+
+            #tmpdt = t - t_max
+            #tmpdW = tmpU1*math.sqrt(tmpdt)
+            #tmpdZ = 0.5*math.pow(tmpdt,3.0/2.0)*(tmpU1 + (1.0 / math.sqrt(3))*tmpU2 )
+
+        else:
+            raise NotImplementedError
+    
     else:
         raise NotImplementedError
 
