@@ -11,7 +11,7 @@ from functools import wraps
 import jax
 from pychastic.vectorized_I_generation import get_wiener_integrals
 import tqdm
-
+from jax.experimental.host_callback import id_tap
 
 def contract_all(a, b):
     return jax.numpy.tensordot(a, b, axes=len(b.shape))
@@ -58,7 +58,7 @@ class SDESolver:
         self.target_mse_density = target_mse_density
         self.adaptive = adaptive
 
-    def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0):
+    def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
         """
         Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``VectorSDESolver`` object.
 
@@ -68,6 +68,17 @@ class SDESolver:
             SDE problem to be solved.
         seed : int, optional
             value of seed for PRNG.
+        chunk_size: int or None, optional
+            Make steps in solver in chunks of `chunk_size` steps.
+            If `chunk_size = n` then value at every nth step is returned.
+            If `None` then maximal size of chunk is used only final value is returned.
+        chunks_per_randomization: int or None, optional
+            Sample wiener trajectories once per `chunks_per_randomization` chunks.
+            If `chunks_per_randomization = n` then PRNG runs at every nth chunk.
+            If `None` PRNG runs once, at beginning of simulation.
+            Smaller values lead to less memory usage. Larger values increase speed.
+        progress_bar: True, False
+            Display `tqdm` style progress bar during computation.
 
         Returns
         -------
@@ -169,7 +180,12 @@ class SDESolver:
             if scheme == "wagner_platen":
                 return new_x
 
-        chunk_size = int(problem.tmax / self.dt)
+        steps_needed = int(problem.tmax / self.dt)
+        tmp = chunks_per_randomization or 1
+        chunk_size = chunk_size or steps_needed
+        number_of_chunks = ((steps_needed // (chunk_size*tmp)) + (1 if steps_needed % (chunk_size*tmp) else 0))*tmp
+        chunks_per_randomization = chunks_per_randomization or number_of_chunks
+
         key = jax.random.PRNGKey(seed)
         
         def scan_func(carry, input_):
@@ -187,24 +203,53 @@ class SDESolver:
         t0 = 0.0
         w0 = jax.numpy.zeros(noise_terms)
 
+        if progress_bar:
+            p_bar = tqdm.tqdm(total = number_of_chunks)
+            def tap_func(*args,**kwargs):
+                p_bar.update()
+        else:
+            def tap_func(*args,**kwargs):
+                pass
+
+        def chunk_function(chunk_start, wieners_chunk):
+            # Parameters: chunk_start = (t0, x0, w0) values at beggining of chunk
+            #             wieners_chunk = array of wiener increments
+            id_tap(tap_func,0)
+            z = jax.lax.scan( scan_func , chunk_start , wieners_chunk )[0] #discard trajectory at chunk resolution
+            return z, z
+
+        def get_solution_fragment(starting_state,key):
+            wiener_integrals = get_wiener_integrals(key, steps=chunk_size*chunks_per_randomization, noise_terms=noise_terms, scheme=self.scheme)    
+
+            last_state , (time_values, solution_values, wiener_values) = jax.lax.scan( 
+                chunk_function, 
+                starting_state,
+                jax.tree_map(lambda x: jnp.reshape(x,(-1,chunk_size)+x.shape[1:]), wiener_integrals)
+            ) #discard carry, remember trajectory
+            
+            return (
+                    last_state,
+                    dict(
+                    time_values=time_values,
+                    solution_values=solution_values,
+                    wiener_values=wiener_values,
+                    )
+                   )
+
         @jax.vmap
         def get_solution(key):
-            wiener_integrals = get_wiener_integrals(key, steps=chunk_size, noise_terms=noise_terms, scheme=self.scheme)
-            _, (time_values, solution_values, wiener_values) = jax.lax.scan(scan_func, (t0, problem.x0, w0), wiener_integrals)
-            
-            return dict(
-                time_values=time_values,
-                solution_values=solution_values,
-                wiener_values=wiener_values
-            )
+            _ , chunked_solution = jax.lax.scan(
+                lambda state, key: get_solution_fragment(state,key),
+                (t0,problem.x0,w0),
+                jax.random.split(key, number_of_chunks // chunks_per_randomization)
+                )
+
+            return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
-        #return [{k: v[i] for k, v in solutions.items()} for i in range(n_trajectories)]  # TODO: Radost make this quick
-
-        # Dis better. Cannot slice list(dict(list)), can slice dict(list(list)) in a sensible way.
-        # For example:
-        # >>> solution['solution_values'][:,-1]
+        if progress_bar: 
+            p_bar.refresh()
         return solutions
 
     def solve(self, problem, seed=0):
