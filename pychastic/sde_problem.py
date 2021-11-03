@@ -43,17 +43,23 @@ class SDEProblem:
       raise ValueError(f'tmax has to bo posiitve, not {tmax}')
     self.tmax = tmax
     
+    if not isinstance(x0, jnp.ndarray):
+        raise ValueError(f"{x0} should be jnp.array, not {type(val)}")
+
     # dimension & shape validation
         
     x0 = jnp.array(x0, dtype=jax.numpy.float32)
 
-    if x0.ndim == a(x0).ndim == b(x0).ndim == 0:
+    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x0)['shape'],jax.eval_shape(a,x0)['dtype'])
+    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x0)['shape'],jax.eval_shape(b,x0)['dtype'])
+
+    if x0.ndim == len(a_x0_shape) == len(b_x0_shape) == 0:
       self.x0 = x0.reshape(1)
       # scalar case
-      if a(x0).ndim != 1:
+      if len(a_x0_shape) != 1:
         new_a = lambda x: a(x).reshape(1)
         # TODO warn about reshaping
-      if b(x0).ndim != 2:
+      if len(b_x0_shape) != 2:
         new_b = lambda x: b(x).reshape(1, 1)
         # TODO warn about reshaping
       
@@ -61,25 +67,22 @@ class SDEProblem:
       self.a = new_a
       self.b = new_b
 
-    elif x0.ndim == a(x0).ndim == 1 and b(x0).ndim == 2:
+    elif x0.ndim == len(a_x0_shape) == 1 and len(b_x0_shape) == 2:
       # vector case
-      if not x0.shape[0] == a(x0).shape[0] == b(x0).shape[0]:
-        raise ValueError(f'Incosistent shapes: {x0.shape}, {a(x0).shape}, {b(x0).shape}')   
+      if not x0.shape[0] == a_x0_shape[0] == b_x0_shape[0]:
+        raise ValueError(f'Incosistent shapes: {x0.shape}, {a_x0_shape}, {b_x0_shape}')   
 
       self.x0 = x0
       self.a = a
       self.b = b
-      self.dimension, self.noise_terms = b(x0).shape   
+      self.dimension, self.noise_terms = b_x0_shape[1]
 
     else:
-      raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a(x0).shape}, {b(x0).shape}')
+      raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a_x0_shape}, {b_x0_shape}')
       
     
     # dtype validation
-
-    for val, key in [(x0, 'initial conditon'), (a(x0), 'drift term'), (b(x0), 'noise term')]:
-      if not isinstance(val, jnp.ndarray):
-        raise ValueError(f"{key} should return jnp.array, not {type(val)}")
+    for val, key in [(x0.dtype, 'initial conditon'), (a_x0_dtype, 'drift term'), (b_x0_dtype, 'noise term')]:
       if not jnp.issubdtype(x0.dtype, jnp.floating):
         raise ValueError(f"{key} dtype should be float, not {val.dtype}.")
 
