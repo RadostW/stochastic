@@ -50,32 +50,43 @@ class SDEProblem:
         
     x0 = jnp.array(x0, dtype=jax.numpy.float32)
 
-    if all(_is_scalar(v) for v in [x0, a(x0), b(x0)]):
+    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x0).shape,jax.eval_shape(a,x0).dtype)
+    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x0).shape,jax.eval_shape(b,x0).dtype)
+
+    if x0.ndim == len(a_x0_shape) == len(b_x0_shape) == 0:
       self.x0 = x0.reshape(1)
-      # scalar case, TODO warn about inefficiency
-      self.a = lambda x: jax.numpy.array(a(x), ndmin=1)
-      self.b = lambda x: jax.numpy.array(b(x), ndmin=2)
-      self.dimension = self.noise_terms = 1
+      # scalar case
+      if len(a_x0_shape) != 1:
+        new_a = lambda x: a(x).reshape(1)
+        # TODO warn about reshaping
+      if len(b_x0_shape) != 2:
+        new_b = lambda x: b(x).reshape(1, 1)
+        # TODO warn about reshaping
       
-    elif x0.ndim == a(x0).ndim == 1 and b(x0).ndim == 2:
+      self.dimension = self.noise_terms = 1
+      self.a = new_a
+      self.b = new_b
+
+    elif x0.ndim == len(a_x0_shape) == 1 and len(b_x0_shape) == 2:
       # vector case
-      if not x0.shape[0] == a(x0).shape[0] == b(x0).shape[0]:
-        raise ValueError(f'Incosistent shapes: {x0.shape}, {a(x0).shape}, {b(x0).shape}')   
+      if not x0.shape[0] == a_x0_shape[0] == b_x0_shape[0]:
+        raise ValueError(f'Incosistent shapes: {x0.shape}, {a_x0_shape}, {b_x0_shape}')   
 
       self.x0 = x0
       self.a = a
       self.b = b
-      self.dimension, self.noise_terms = b(x0).shape   
+      self.dimension, self.noise_terms = b_x0_shape
 
     else:
-      raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a(x0).shape}, {b(x0).shape}')
+      raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a_x0_shape}, {b_x0_shape}')
       
     
-    # dtype validation
 
-    for val, key in [(self.x0, 'initial conditon'), (self.a(x0), 'drift term'), (self.b(x0), 'noise term')]:
-      if not isinstance(val, jnp.ndarray):
-        raise ValueError(f"{key} should return jnp.array, not {type(val)}")
+    if not isinstance(x0, jnp.ndarray):
+        raise ValueError(f"{x0} should be jnp.array, not {type(x0)}")
+
+    # dtype validation
+    for val, key in [(x0.dtype, 'initial conditon'), (a_x0_dtype, 'drift term'), (b_x0_dtype, 'noise term')]:
       if not jnp.issubdtype(x0.dtype, jnp.floating):
         raise ValueError(f"{key} dtype should be float, not {val.dtype}.")
 

@@ -12,6 +12,15 @@ ways of dealing with it -- explicit solvent and bigger supercomputer or implicit
 solvent and often lack of hydrodynamic interactions. In either case estimating
 diffusive properties of molecules is near impossible.
 
+.. figure:: dna_shaking_small.gif
+   :scale: 50 %
+   :alt: Small DNA loop undergoing Brownian dynamics
+
+   About 0.5 milisecond of Brownian motion of twisted DNA loop of length 1000 angstroms.
+
+   (Note **milisecond** not **microsecond** like in typical MD simulations).
+
+
 Here SDEs come to rescue -- correct formulation of overdamped dynamics reduces
 order of ODEs to first order with stochastic noise removing shortest timescale
 from the simulations. Additionaly in Stokesian regime hydrodynamic interactions
@@ -121,6 +130,8 @@ Simulating scalar SDEs
   >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
   >>> plt.show()
 
+#### TODO ##### improve example, add plot
+
 The ``SDEProblem`` constructor takes two callables (functions) as arguments. 
 First one decribes the drift term, second one describes the noise term. In 
 python you can define functions either by using ``def`` keyword or on-the-fly 
@@ -137,36 +148,8 @@ step being too large you can fix this by setting smaller timestep and better
 integration method either in ``SDESolver`` constructor or in ``solver.dt`` 
 later (but before calling solve!)
 
-.. prompt:: python >>> auto
-
-  >>> import pychastic
-  >>> import jax.numpy as np
-  >>> g = 2.0
-  >>> problem = pychastic.sde_problem.SDEProblem(
-      lambda x: (1.0 / x**2) - (1.0-1.0/x)*g,
-      lambda x: np.sqrt(2.0*(1.0-1.0/x)),
-      1.5,
-      5.0
-      )
-  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001, scheme = 'adaptive_milstein') # <-- selecting smaller step and better solver
-  >>> trajectory = solver.solve(problem)
-  >>> import matplotlib.pyplot as plt
-  >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
-  >>> plt.show()
-
-.. image:: brownian_near_wall_5times.png
-
-When you zoom in on regions where sphere gets close to the wall you can see that
-timestep decreases drastically, we're able to compute this trajectory in
-acceptable time without giving solver explicit information about domain of the 
-equation thanks to adaptive timestepping -- nice!
-
-.. image:: zoomin_close.png
-
 Generating many trajectories
 ''''''''''''''''''''''''''''
-
-##### TODO ###### Generating ensembles fast
 
 It's not uncommon that we're interested in a whole *ensemble* of trajectories.
 Because of jit optimization it's much faster to generate trajectories together
@@ -182,13 +165,16 @@ functions, but this ideally happens only once).
       lambda x: (1.0 / x**2) - (1.0-1.0/x)*g,
       lambda x: np.sqrt(2.0*(1.0-1.0/x)),
       1.5,
-      5.0
+      0.5
       )
-  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001, scheme = 'adaptive_milstein')
+  >>> solver = pychastic.sde_solver.SDESolver(dt = 0.001)
   >>> trajectories = solver.solve_many(problem,500)
   >>> import matplotlib.pyplot as plt
-  >>> plt.histogram(trajectories['solution_values'][:,-1])
+  >>> plt.hist(trajectories['solution_values'][:,-1].flatten())
   >>> plt.show()
+
+
+#### TODO ##### Improve example, add histogram and shaded plot with confidence bands and such.
 
 More degrees of freedom
 '''''''''''''''''''''''
@@ -235,7 +221,18 @@ last term including diverngence vanishes.
 
 For now we'll simulate two beads connected by a spring of rest length `4.0`. 
 We'll work in natural units where energy is measured in multiples of :math:`k_bT`
-and distances in multiples of sphere's radii.
+and distances in multiples of sphere's radii. This convention can be summarised with
+the following table.
+
+======== ===============================
+Quantity Scale (measured as multiple of)
+======== ===============================
+Distance :math:`L`
+Time     :math:`\eta L^3 / k_b T`
+Energy   :math:`k_b T`
+Force    :math:`k_b T / L`
+======== ===============================
+
 
 We can go ahead and code this equation in python.
 
@@ -267,15 +264,13 @@ We can go ahead and code this equation in python.
     ...      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
     ...      return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
     ...
-    >>> problem = pychastic.sde_problem.VectorSDEProblem(
+    >>> problem = pychastic.sde_problem.SDEProblem(
     ...       drift,
     ...       noise,
     ...       x0 = jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(6,)),
-    ...       dimension = 6,
-    ...       noiseterms = 6,
     ...       tmax = 500.0)
 
-    >>> solver = pychastic.sde_solver.VectorSDESolver()
+    >>> solver = pychastic.sde_solver.SDESolver()
     >>> trajectory = solver.solve(problem) # takes about 10 seconds
 
     >>> plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
@@ -291,6 +286,13 @@ on short timescales they stay together because they are connected by a spring.
 
 You're good to go! There are many options that control the integration precision
 and speed. You can choose different algorithms for integration as well.
+
+
+##### TODO #### Improve example. Add animation. Add shaded plot for location of small sphere.
+
+
+Further reading
+'''''''''''''''
 
 For comprehensive (600 page long) book on the topic try *Numerical Solution of
 Stochastic Differential Equations* P. Kloden & E. Platen; Springer (1992)
