@@ -46,15 +46,12 @@ class SDEProblem:
       raise ValueError(f'tmax has to bo posiitve, not {tmax}')
     self.tmax = tmax
     
-    if not isinstance(x0, jnp.ndarray):
-        raise ValueError(f"{x0} should be jnp.array, not {type(val)}")
-
     # dimension & shape validation
         
     x0 = jnp.array(x0, dtype=jax.numpy.float32)
 
-    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x0)['shape'],jax.eval_shape(a,x0)['dtype'])
-    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x0)['shape'],jax.eval_shape(b,x0)['dtype'])
+    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x0).shape,jax.eval_shape(a,x0).dtype)
+    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x0).shape,jax.eval_shape(b,x0).dtype)
 
     if x0.ndim == len(a_x0_shape) == len(b_x0_shape) == 0:
       self.x0 = x0.reshape(1)
@@ -84,6 +81,10 @@ class SDEProblem:
       raise ValueError(f'Inconsistent dimensions: {x0.shape}, {a_x0_shape}, {b_x0_shape}')
       
     
+
+    if not isinstance(x0, jnp.ndarray):
+        raise ValueError(f"{x0} should be jnp.array, not {type(x0)}")
+
     # dtype validation
     for val, key in [(x0.dtype, 'initial conditon'), (a_x0_dtype, 'drift term'), (b_x0_dtype, 'noise term')]:
       if not jnp.issubdtype(x0.dtype, jnp.floating):
