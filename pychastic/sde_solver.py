@@ -60,12 +60,12 @@ class SDESolver:
 
     def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
         """
-        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``VectorSDESolver`` object.
+        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``SDESolver`` object.
 
         Parameters
         ----------
-        problem : VectorSDEProblem
-            SDE problem to be solved.
+        problem : SDEProblem
+            (Vector) SDE problem to be solved.
         seed : int, optional
             value of seed for PRNG.
         chunk_size: int or None, optional
@@ -75,7 +75,7 @@ class SDESolver:
         chunks_per_randomization: int or None, optional
             Sample wiener trajectories once per `chunks_per_randomization` chunks.
             If `chunks_per_randomization = n` then PRNG runs at every nth chunk.
-            If `None` PRNG runs once, at beginning of simulation.
+            If `None`, PRNG runs once, at beginning of simulation.
             Smaller values lead to less memory usage. Larger values increase speed.
         progress_bar: True, False
             Display `tqdm` style progress bar during computation.
@@ -83,30 +83,30 @@ class SDESolver:
         Returns
         -------
         dict
-            Under following keys you'll find:
-            ``last_time`` -- time at last step of integration
-            ``last_value`` -- value at last step of integration
-            ``last_wiener`` -- value of underlying wiener process at last step of integration
-            ``trajectory`` -- a jnp.array containing entire trajectory of the process, each entry in the array consists of 3 elements (time, value, wieners).
+            Under following keys in returned `dict` you'll find:
+
+            * ``time_values`` -- (`n_trajectories`, `steps`) jnp.array containing timestamps coresponding to each trajectory.
+            * ``solution_values`` -- (`n_trajectories`, `steps`, `problem_dimension`) `jnp.array` containing values of integrated SDE.
+            * ``wiener_values`` -- (`n_trajectories`, `steps`, `noise_dimension`) `jnp.array` containing values of Wiener processes driving the SDE.
 
         Example
         -------
-        >>> solver = VectorSDESolver()
-        >>> problem = pychastic.sde_problem.VectorSDEProblem(
+        >>> import pychastic
+        >>> import jax.numpy as jnp
+        >>> solver = pychastic.sde_solver.SDESolver()
+        >>> problem = pychastic.sde_problem.SDEProblem(
         ... lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
         ... lambda x: jnp.array([
         ...    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
         ...    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
         ... ]),
-        ... dimension = 2,
-        ... noiseterms= 2,
         ... x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
         ... tmax=0.02
         ... )
-        >>> solution = solver.solve(problem)
-        >>> (r,phi) = solution["last_value"]
-        >>> compare = {"integrated":r*jnp.array([jnp.cos(phi),jnp.sin(phi)]),"exact":solution["last_wiener"]+problem.x0}
-        >>> print(compare)
+        >>> solution = solver.solve_many(problem,n_trajectories = 100)
+        >>> (r,phi) = (solution["solution_values"][:,-1,:]).transpose()
+        >>> compare = {"integrated":(r*jnp.array([jnp.cos(phi),jnp.sin(phi)])).T,"exact":solution["wiener_values"][:,-1,:]+problem.x0}
+        >>> print(compare["integrated"][0],compare["exact"][0])
             
         """
 
@@ -252,7 +252,57 @@ class SDESolver:
             p_bar.refresh()
         return solutions
 
-    def solve(self, problem, seed=0):
+    def solve(self, problem, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
+        """
+        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``SDESolver`` object.
+
+        Parameters
+        ----------
+        problem : SDEProblem
+            (Vector) SDE problem to be solved.
+        seed : int, optional
+            value of seed for PRNG.
+        chunk_size: int or None, optional
+            Make steps in solver in chunks of `chunk_size` steps.
+            If `chunk_size = n` then value at every nth step is returned.
+            If `None` then maximal size of chunk is used only final value is returned.
+        chunks_per_randomization: int or None, optional
+            Sample wiener trajectories once per `chunks_per_randomization` chunks.
+            If `chunks_per_randomization = n` then PRNG runs at every nth chunk.
+            If `None`, PRNG runs once, at beginning of simulation.
+            Smaller values lead to less memory usage. Larger values increase speed.
+        progress_bar: True, False
+            Display `tqdm` style progress bar during computation.
+
+        Returns
+        -------
+        dict
+            Under following keys in returned `dict` you'll find:
+
+            * ``time_values`` -- (`steps`,) jnp.array containing timestamps coresponding to each trajectory.
+            * ``solution_values`` -- (`steps`, `problem_dimension`) `jnp.array` containing values of integrated SDE.
+            * ``wiener_values`` -- (`steps`, `noise_dimension`) `jnp.array` containing values of Wiener processes driving the SDE.
+
+        Example
+        -------
+        >>> import pychastic
+        >>> import jax.numpy as jnp
+        >>> solver = pychastic.sde_solver.SDESolver()
+        >>> problem = pychastic.sde_problem.SDEProblem(
+        ... lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
+        ... lambda x: jnp.array([
+        ...    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos \phi,      sin \phi
+        ...    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin \phi / r, cos \phi / r
+        ... ]),
+        ... x0 = jnp.array([1.0,0.0]), # r=1.0, \phi=0.0
+        ... tmax=0.02
+        ... )
+        >>> solution = solver.solve(problem)
+        >>> (r,phi) = (solution["solution_values"][-1,:])
+        >>> compare = {"integrated":(r*jnp.array([jnp.cos(phi),jnp.sin(phi)])).T,"exact":solution["wiener_values"][-1,:]+problem.x0}
+        >>> print(compare["integrated"],compare["exact"])
+            
+        """
         solution = self.solve_many(problem, n_trajectories=1, seed=seed)
         solution = jax.tree_map(lambda x: x[0], solution)
         return solution

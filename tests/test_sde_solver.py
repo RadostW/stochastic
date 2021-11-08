@@ -25,8 +25,8 @@ scalar_arctan_problem = SDEProblem(
 )
 
 @pytest.mark.parametrize('solver,problem,steps,quantile_99', [
-  (SDESolver(), scalar_geometric_bm, 2**7, 1),
-  (SDESolver(scheme='milstein'), scalar_geometric_bm, 2**7, 0.24),
+  (SDESolver(), scalar_geometric_bm, 2**7, 1.4),
+  (SDESolver(scheme='milstein'), scalar_geometric_bm, 2**7, 0.7),
   
   (SDESolver(), scalar_arctan_problem, 2**7, 0.09),
   (SDESolver(scheme='milstein'), scalar_arctan_problem, 2**7, 0.008),
