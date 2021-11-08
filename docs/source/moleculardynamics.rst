@@ -288,7 +288,11 @@ You're good to go! There are many options that control the integration precision
 and speed. You can choose different algorithms for integration as well.
 
 
-##### TODO #### Improve example. Add animation. Add shaded plot for location of small sphere.
+.. figure:: two_balls_anim.gif
+   :scale: 50 %
+   :alt: One large and one small bead moving according to brownian motion
+
+   3D animation of the two spheres connected with harmonic spring example.
 
 
 Further reading
