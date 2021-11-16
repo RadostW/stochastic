@@ -16,9 +16,9 @@ diffusive properties of molecules is near impossible.
    :scale: 50 %
    :alt: Small DNA loop undergoing Brownian dynamics
 
-   About 0.5 milisecond of Brownian motion of twisted DNA loop of length 1000 angstroms.
+   About 0.5 millisecond of Brownian motion of twisted DNA loop of length 1000 angstroms.
 
-   (Note **milisecond** not **microsecond** like in typical MD simulations).
+   (Note **millisecond** not **microsecond** like in typical MD simulations).
 
 
 Here SDEs come to rescue -- correct formulation of overdamped dynamics reduces
