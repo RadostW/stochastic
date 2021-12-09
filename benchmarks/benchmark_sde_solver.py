@@ -71,7 +71,7 @@ def test_2k_trajectories_wagner_platen_speed(benchmark):
   n = 2000 # n trajectories
 
   solver.dt = problem.tmax / steps
-  solver.scheme = 'wagner-platen'
+  solver.scheme = 'wagner_platen'
 
   def to_benchmark():
     return solver.solve_many(problem,n)["solution_values"].block_until_ready()
