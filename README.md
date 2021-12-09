@@ -1,3 +1,5 @@
+![Tests](https://github.com/RadostW/stochastic/actions/workflows/tests.yml/badge.svg)
+
 # PyChastic
 
 All python stochastic differential equations (SDE) solver.
