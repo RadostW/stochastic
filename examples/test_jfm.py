@@ -37,18 +37,18 @@ def noise(x):
      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
      return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
 
-problem = pychastic.sde_problem.VectorSDEProblem(
+problem = pychastic.sde_problem.SDEProblem(
       drift,
       noise,
       #x0 = jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(3*n_beads,)), # two beads
       x0 = jnp.reshape(jnp.array([[-2.,0.,0.],[2.,0.,0.],[6.,0.,0.],[10.,0.,0.]]),(3*n_beads,)), # four beads
       #x0 = jnp.reshape(jnp.array([[-2.,0.,0.]]),(3*n_beads,)), # SINGLE BEAD BENCHMARK
-      dimension = 3*n_beads,
-      noiseterms = 3*n_beads,
+      #dimension = 3*n_beads,
+      #noiseterms = 3*n_beads,
       tmax = 10000.0)
 
-solver = pychastic.sde_solver.VectorSDESolver(dt = 0.1)
-trajectories = np.array([solver.solve(problem) for x in tqdm(range(100))])
+solver = pychastic.sde_solver.SDESolver(dt = 0.1)
+trajectories = np.array([solver.solve(problem) for x in tqdm(range(2))])
 
 
 #
