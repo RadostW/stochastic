@@ -194,6 +194,11 @@ class SDESolver:
             wiener_integrals = input_
             wiener_integrals['d_w'] *= jax.numpy.sqrt(self.dt)
             wiener_integrals['d_ww'] *= self.dt
+
+            if self.scheme == 'wagner_platen':
+                wiener_integrals['d_wt']  *= self.dt**(3/2)
+                wiener_integrals['d_tw']  *= self.dt**(3/2)
+                wiener_integrals['d_www'] *= self.dt**(3/2)
             
             t += self.dt
             x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals)
@@ -250,6 +255,7 @@ class SDESolver:
         solutions = get_solution(keys)
         if progress_bar: 
             p_bar.refresh()
+            p_bar.close()
         return solutions
 
     def solve(self, problem, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
