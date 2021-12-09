@@ -13,11 +13,8 @@ SDE solvers
 .. automodule:: pychastic.sde_solver
    :members:
 
-Wiener process variants
-'''''''''''''''''''''''
 
-.. automodule:: pychastic.wiener
-   :members:
+------------------------------------------------------
 
 Expected values of principle integrals
 ''''''''''''''''''''''''''''''''''''''

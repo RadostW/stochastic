@@ -303,7 +303,7 @@ class SDESolver:
         >>> print(compare["integrated"],compare["exact"])
             
         """
-        solution = self.solve_many(problem, n_trajectories=1, seed=seed)
+        solution = self.solve_many(problem, n_trajectories=1, seed=seed, chunk_size = chunk_size, chunks_per_randomization = chunks_per_randomization, progress_bar = progress_bar)
         solution = jax.tree_map(lambda x: x[0], solution)
         return solution
 
