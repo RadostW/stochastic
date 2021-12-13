@@ -12,7 +12,8 @@ In this example there is no drift and noise is constant
 .. prompt:: python >>> auto
 
   >>> import pychastic
-  >>> problem = pychastic.sde_problem.SDEProblem(lambda x: 1.0,lambda x: 1.0,0.0,2.0)
+  >>> import jax.numpy as jnp
+  >>> problem = pychastic.sde_problem.SDEProblem(lambda x: jnp.array(1.0),lambda x: jnp.array(1.0),0.0,2.0)
   >>> solver = pychastic.sde_solver.SDESolver()
   >>> trajectory = solver.solve(problem)
   >>> trajectory
