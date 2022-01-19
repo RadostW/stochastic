@@ -55,27 +55,19 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     
     elif scheme == 'wagner_platen':
         if noise_terms == 1:
-            #tmpU1 = next(self.normal_generator)
-            #tmpU2 = next(self.normal_generator)
 
-            #tmpdt = t - t_max
-            #tmpdW = tmpU1*math.sqrt(tmpdt)
-            #tmpdZ = 0.5*math.pow(tmpdt,3.0/2.0)*(tmpU1 + (1.0 / math.sqrt(3))*tmpU2 )
-
-            key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
-
-            dW_scaled = jax.random.normal(key1, shape=(steps, noise_terms))
-            dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
-
-            u = jax.random.normal(key2, shape=(2, steps, noise_terms))
+            u = jax.random.normal(key, shape=(2, steps, noise_terms))
+            dW_scaled = u[0]
             dZ_scaled = 0.5*(u[0] + 3**(-0.5)*u[1])[..., jax.numpy.newaxis]
+            
+            dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
 
             return {
                 'd_w': dW_scaled,
                 'd_ww': dI_scaled,
                 'd_tw': dZ_scaled,
                 'd_wt': dW_scaled[..., jax.numpy.newaxis] - dZ_scaled,
-                'd_www': (0.5*(dW_scaled**2/3-1)*dW_scaled)[..., jax.numpy.newaxis, jax.numpy.newaxis],
+                'd_www': (0.5*((1.0/3.0)*dW_scaled**2-1)*dW_scaled)[..., jax.numpy.newaxis, jax.numpy.newaxis],
             }
 
         else:
