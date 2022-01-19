@@ -5,7 +5,6 @@ import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
 from pychastic.sde_problem import SDEProblem
-import pychastic.utils
 import pychastic.wiener_integral_moments
 from functools import wraps
 import jax
