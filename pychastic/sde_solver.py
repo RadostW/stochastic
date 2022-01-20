@@ -192,7 +192,9 @@ class SDESolver:
             
             wiener_integrals = input_
             wiener_integrals['d_w'] *= jax.numpy.sqrt(self.dt)
-            wiener_integrals['d_ww'] *= self.dt
+            
+            if self.scheme == 'milstein':
+                wiener_integrals['d_ww'] *= self.dt
 
             if self.scheme == 'wagner_platen':
                 wiener_integrals['d_wt']  *= self.dt**(3/2)
