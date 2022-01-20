@@ -1,16 +1,15 @@
-from copy import deepcopy
-import jax
-import time
-import jax.numpy as jnp
-import numpy as np
-from tqdm import tqdm
-from pychastic.sde_problem import SDEProblem
-import pychastic.wiener_integral_moments
 from functools import wraps
 import jax
-from pychastic.vectorized_I_generation import get_wiener_integrals
+import jax.numpy as jnp
+import numpy as np
 import tqdm
 from jax.experimental.host_callback import id_tap
+from pychastic.sde_problem import SDEProblem
+from pychastic.vectorized_I_generation import get_wiener_integrals
+
+
+#from jax.config import config
+#config.update('jax_disable_jit', True)
 
 def contract_all(a, b):
     return jax.numpy.tensordot(a, b, axes=len(b.shape))
@@ -155,19 +154,26 @@ class SDESolver:
         ):
 
             id_ = lambda x: x
-            f_t = L(id_, "t")
+
             f_w = L(id_, "w")
+
+            f_t = L(id_, "t")
             f_ww = L(id_, "ww")
+
             f_tw = L(id_, "tw")
             f_wt = L(id_, "wt")
             f_www = L(id_, "www")
 
+            f_tt = L(id_, "tt")
+
             new_x = x
             new_x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
+
             if scheme == "euler":
                 return new_x
 
             new_x += contract_all(f_ww(x), d_ww)
+
             if scheme == "milstein":
                 return new_x
 
@@ -175,6 +181,7 @@ class SDESolver:
                 contract_all(f_tw(x), d_tw)
                 + contract_all(f_wt(x), d_wt)
                 + contract_all(f_www(x), d_www)
+                + (f_tt(x)*d_t*d_t/2).squeeze()
             )
             if scheme == "wagner_platen":
                 return new_x
@@ -186,24 +193,25 @@ class SDESolver:
         chunks_per_randomization = chunks_per_randomization or number_of_chunks
 
         key = jax.random.PRNGKey(seed)
-        
+
         def scan_func(carry, input_):
             t, x, w = carry
-            
+
             wiener_integrals = input_
-            wiener_integrals['d_w'] *= jax.numpy.sqrt(self.dt)
-            
-            if self.scheme == 'milstein':
-                wiener_integrals['d_ww'] *= self.dt
+            wiener_integrals_rescaled = dict()
+            wiener_integrals_rescaled['d_w'] = jax.numpy.sqrt(self.dt) * wiener_integrals['d_w']
+
+            if self.scheme == 'milstein' or self.scheme == 'wagner_platen':
+                wiener_integrals_rescaled['d_ww'] = self.dt * wiener_integrals['d_ww']
 
             if self.scheme == 'wagner_platen':
-                wiener_integrals['d_wt']  *= self.dt**(3/2)
-                wiener_integrals['d_tw']  *= self.dt**(3/2)
-                wiener_integrals['d_www'] *= self.dt**(3/2)
-            
+                wiener_integrals_rescaled['d_wt']  = self.dt**(3/2) * wiener_integrals['d_wt']
+                wiener_integrals_rescaled['d_tw']  = self.dt**(3/2) * wiener_integrals['d_tw']
+                wiener_integrals_rescaled['d_www'] = self.dt**(3/2) * wiener_integrals['d_www']
+
             t += self.dt
-            x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals)
-            w += wiener_integrals['d_w']
+            x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
+            w += wiener_integrals_rescaled['d_w']
             return (t, x, w), (t, x, w)
 
         t0 = 0.0
@@ -227,12 +235,12 @@ class SDESolver:
         def get_solution_fragment(starting_state,key):
             wiener_integrals = get_wiener_integrals(key, steps=chunk_size*chunks_per_randomization, noise_terms=noise_terms, scheme=self.scheme)    
 
-            last_state , (time_values, solution_values, wiener_values) = jax.lax.scan( 
-                chunk_function, 
+            last_state , (time_values, solution_values, wiener_values) = jax.lax.scan(
+                chunk_function,
                 starting_state,
                 jax.tree_map(lambda x: jnp.reshape(x,(-1,chunk_size)+x.shape[1:]), wiener_integrals)
             ) #discard carry, remember trajectory
-            
+
             return (
                     last_state,
                     dict(
@@ -254,7 +262,7 @@ class SDESolver:
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
-        if progress_bar: 
+        if progress_bar:
             p_bar.refresh()
             p_bar.close()
         return solutions
@@ -322,7 +330,7 @@ if __name__ == '__main__':
         b = lambda x: b*x,
         x0 = 1.0,
         tmax = 1.0,
-        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)   
+        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)
     )
     problem = scalar_geometric_bm
     solver = SDESolver()

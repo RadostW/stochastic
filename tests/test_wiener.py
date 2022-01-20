@@ -226,6 +226,7 @@ def test_integral_generation_wagner_platen_1d():
 
 if __name__ == "__main__":
     test_integral_generation_euler()
+    test_integral_generation_wagner_platen_1d()
 
 
 #     tested_integrals = [[1],[2],[0],[1,1],[1,2],[1,0],[2,0],[0,1],[0,2],[1,1,1]]
