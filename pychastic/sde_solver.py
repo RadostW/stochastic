@@ -134,7 +134,7 @@ class SDESolver:
             return wrapped
 
         def L(f, idx):
-            for x in idx:
+            for x in reversed(idx):
                 if x == "t":
                     f = L_t(f)
                 elif x == "w":
