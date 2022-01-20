@@ -12,12 +12,43 @@ vectorized_fill_diagonal = jax.vmap(fill_diagonal, in_axes=(0, 0))
 
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
-
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
+    """
+    Calculate moments of principal wiener integrals.
+    
+    Parameters
+    ----------
+    key : jax.PRNGKey
+        source of randomness
+    steps : int, optional
+        number of steps
+    noise_terms : int, optional
+        wiener process dimension
+    scheme : ('euler' or 'milstein' or 'wagner_platen')
+        controls order of integrals generated and method of generation
+    p : int, optional
+        controls series truncation
+        
+    Returns
+    -------
+    dict
+        Keys are like 'd_w' or 'd_wt' and values are `jnp.arrays`
+    """
     if scheme == 'euler' or (scheme == 'milstein' and noise_terms == 1):
         dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
-        dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
-    
+        
+        if scheme == 'euler':
+            return {
+                'd_w' : dW_scaled
+            }
+        
+        dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis] # noise_terms == 1 is special
+        
+        if scheme == 'milstein':
+            return {
+                'd_w' : dW_scaled,
+                'd_ww' : dI_scaled
+            }
     elif scheme == 'milstein':
         key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
         xi = jax.random.normal(key1, shape=(steps, 1,noise_terms))
@@ -52,30 +83,27 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         dI_scaled = vectorized_fill_diagonal(
             Imat_nodiag, 0.5 * (xi ** 2 - 1).squeeze()
         )  # Diagonal entries work differently
+        
+        return {
+                'd_w': dW_scaled,
+                'd_ww': dI_scaled
+            }
     
     elif scheme == 'wagner_platen':
         if noise_terms == 1:
-            #tmpU1 = next(self.normal_generator)
-            #tmpU2 = next(self.normal_generator)
 
-            #tmpdt = t - t_max
-            #tmpdW = tmpU1*math.sqrt(tmpdt)
-            #tmpdZ = 0.5*math.pow(tmpdt,3.0/2.0)*(tmpU1 + (1.0 / math.sqrt(3))*tmpU2 )
-
-            key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
-
-            dW_scaled = jax.random.normal(key1, shape=(steps, noise_terms))
-            dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
-
-            u = jax.random.normal(key2, shape=(2, steps, noise_terms))
+            u = jax.random.normal(key, shape=(2, steps, noise_terms))
+            dW_scaled = u[0]
             dZ_scaled = 0.5*(u[0] + 3**(-0.5)*u[1])[..., jax.numpy.newaxis]
+            
+            dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
 
             return {
                 'd_w': dW_scaled,
                 'd_ww': dI_scaled,
                 'd_tw': dZ_scaled,
                 'd_wt': dW_scaled[..., jax.numpy.newaxis] - dZ_scaled,
-                'd_www': (0.5*(dW_scaled**2/3-1)*dW_scaled)[..., jax.numpy.newaxis, jax.numpy.newaxis],
+                'd_www': (0.5*((1.0/3.0)*dW_scaled**2-1)*dW_scaled)[..., jax.numpy.newaxis, jax.numpy.newaxis],
             }
 
         else:
@@ -83,11 +111,6 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     
     else:
         raise NotImplementedError
-
-    return {
-        'd_w': dW_scaled,
-        'd_ww': dI_scaled
-    }
 
 if __name__ == '__main__':
     seed = 0

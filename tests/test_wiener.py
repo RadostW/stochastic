@@ -1,298 +1,231 @@
-import unittest
-from sortedcontainers.sorteddict import SortedDict
+import pychastic.vectorized_I_generation
+import pychastic.wiener_integral_moments
 
-import random
+import jax  # for PRNGKey generation
+import jax.numpy as jnp
 import numpy as np
-
-from pychastic.vectorized_I_generation import get_wiener_integrals
-import jax
-
-key = jax.random.PRNGKey(seed=0)
-n = 1000
-noise_terms = 2
-wiener_integrals = get_wiener_integrals(key, steps=n, noise_terms=2, scheme='milstein')
+import itertools
 
 
-def test_increment_variance():
-  dw1, dw2 = wiener_integrals['d_w'].T
-  assert abs(dw1.var() - 1) < 5/jax.numpy.sqrt(n)
-  assert abs((dw1*dw2).mean()) < 5/jax.numpy.sqrt(n)
-  
-  dw1w1 = wiener_integrals['d_ww'][:, 0, 0]
-  dw1w2 = wiener_integrals['d_ww'][:, 0, 1]
-  dw2w1 = wiener_integrals['d_ww'][:, 1, 0]
-  dw2w2 = wiener_integrals['d_ww'][:, 1, 1]
+def test_integral_generation_euler():
+    tested_scheme = "euler"
 
-  assert abs(dw1w2.mean()) < 5/jax.numpy.sqrt(n)
-  assert abs((dw1w2**2).mean() - 0.5) < 5/jax.numpy.sqrt(n)
-  assert abs((dw1w2*dw2w1).mean()) < 5/jax.numpy.sqrt(n)
-  assert jax.numpy.isclose(dw1w2 + dw2w1, dw1 * dw2, atol=1e-6).all()
-  
-  """
-  E(I_12) = 0, E(I_12 ^2) = h^2 / 2
-  E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
-  I_12 + I_21 = I_1 * I_2
+    # Prepare values of means and second moments = E(XY)
+    tested_integrals = [[1], [2], [0]]  # [dW1,dW2,dt]
+    tested_labels = ["d_w1", "d_w2", "d_t"]
+    target_means = jnp.array(
+        [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
+    )
+    target_mean_products = jnp.array(
+        [
+            pychastic.wiener_integral_moments.E2(idx, idy)(1)
+            for (idx, idy) in itertools.product(tested_integrals, tested_integrals)
+        ]
+    )
 
-  return #unfinished test below
-  w = VectorWiener(noiseterms=2)
-  T = 100
-  points = list(range(T))
-  for t in points:
-      w.get_w(float(t))
-  
-  dw_list = []
-  for t in range(T):
-      dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-  dw_list = np.array(dw_list)
-  """
-  
+    samples_exponent = 14
+    z_score_cutoff = 5
 
-'''
-    var = np.var(np.array(dw_list))
+    seed = 0
+    key = jax.random.PRNGKey(seed)
+    sample_integrals = pychastic.vectorized_I_generation.get_wiener_integrals(
+        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2
+    )
 
-    self.assertAlmostEqual( var , 1 , delta=5.0/np.sqrt(T), 
-            msg = f'Variance of Wiener increments incorrect: {var}')
+    sample_integrals = jnp.array(
+        [
+            sample_integrals["d_w"][:, 0],
+            sample_integrals["d_w"][:, 1],
+            jnp.ones_like(sample_integrals["d_w"][:, 0]),
+        ]
+    ).T
 
-    # add points in order
-    dt = 0.01
-    np.arange(0, T, dt)
-    values = [w.get_w(t) for t in points]
+    sample_means = jnp.mean(sample_integrals, axis=0)
+    sample_mean_products = jnp.array(
+        [
+            jnp.mean(x * y)
+            for (x, y) in itertools.product(sample_integrals.T, sample_integrals.T)
+        ]
+    )
 
-    dw_list = []
-    for t in np.arange(0, T, dt):
-        dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+    means_close = jnp.isclose(
+        sample_means, target_means, atol=z_score_cutoff * 2 ** (-samples_exponent / 2)
+    )
+    means_error = sample_means - target_means
+    assert means_close.all(), "Expected values incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(means_close, means_error, tested_labels)
+        }
+    )
 
-    var = np.var(dw_list)
-
-    self.assertAlmostEqual( var , dt , delta=5.0*np.sqrt(len(np.arange(0, T, dt))), 
-            msg = f'Variance of Wiener increments incorrect: {var}')
-
-    def test_autocovariance(self):
-        w = Wiener()
-        T = 100
-        points = list(range(T))
-
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
-
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-        dw_list = np.array(dw_list)
-
-        #Compute covariance of two random samples
-        cov = np.correlate(dw_list[1:],dw_list[:-1])[0] / (len(dw_list)-2)
-
-        self.assertAlmostEqual( cov , 0 , delta=5.0/np.sqrt(T), 
-               msg = f'Autocovariance of Wiener increments incorrect: {cov}')
-
-
-class TestWienerWithZ(unittest.TestCase):
-    def test_sampling_persistent(self):
-        w = WienerWithZ()
-
-        w_first_try = w.get_w(float(7))
-
-        T = 1000
-        points = list(range(T))
-
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
-
-        w_second_try = w.get_w(float(7))
-
-        self.assertEqual( w_first_try , w_second_try, 'Wiener value changed between samplings')
-
-
-    def test_sampling_z_persistent(self):
-        w = WienerWithZ()
-
-        z_first_try = w.get_z(float(7),float(10))
-
-        T = 1000
-        points = list(range(T))
-
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
-
-        z_second_try = w.get_z(float(7),float(10))
-
-        assert np.isclose(z_first_try, z_second_try, atol=1e-6), 'Z integral value changed between samplings'
-
-    def test_ensure_sample_point_properly_distributes_z(self):
-        w = WienerWithZ()
-        t1, t2, t3 = 1, 2, 3
-        w.ensure_sample_point(t1)
-        w.ensure_sample_point(t3)
-        z13 = w.sample_points[t3]['zToPrevPoint']
-        w.ensure_sample_point(t2)
-        z12 = w.sample_points[t2]['zToPrevPoint']
-        z23 = w.sample_points[t3]['zToPrevPoint']
-        w1 = w.sample_points[t1]['w']
-        w2 = w.sample_points[t2]['w']
-        w3 = w.sample_points[t3]['w']
-        new_z13 = z12 + z23 + (t3-t2)*(w2-w1)
-        assert np.isclose(z13, new_z13)
-
-    def test_z_sums_properly(self):
-        np.random.seed(0)
-        t1, t2, t3, t4 = 1, 2, 3, 4
-        w1, w2, w3, w4 = np.random.normal(size=4)
-        z01, z12, z23, z34 = np.random.normal(size=4)
-        w = WienerWithZ()
-        w.sample_points = SortedDict({
-            0:  {'w': 0, 'zToPrevPoint': 0},
-            t1: {'w': w1, 'zToPrevPoint': z01},
-            t2: {'w': w2, 'zToPrevPoint': z12},
-            t3: {'w': w3, 'zToPrevPoint': z23},
-            t4: {'w': w4, 'zToPrevPoint': z34},
-        })
-        true_z14 = z12 + z23 + (t3-t2)*(w2-w1) + z34 + (t4-t3)*(w3-w1)
-        z14 = w.get_z(t1, t4)
-        assert np.isclose(true_z14, z14)
-
-
+    products_close = jnp.isclose(
+        sample_mean_products,
+        target_mean_products,
+        atol=z_score_cutoff * 2 ** (-samples_exponent / 2),
+    )
+    products_error = sample_mean_products - target_mean_products
+    assert products_close.all(), "Expected products incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(
+                products_close,
+                products_error,
+                itertools.product(tested_labels, tested_labels),
+            )
+        }
+    )
     
-    def test_z_variance_and_covariance(self):
-        w = WienerWithZ()
-        T = 10000
-        points = list(range(T))
+    
+    
+    
+def test_integral_generation_milstein():
+    tested_scheme = "milstein"
 
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
+    # Prepare values of means and second moments = E(XY)
+    tested_integrals = [[1,1], [1,2], [2,1], [2,2], [1], [2], [0]]  # [dW1,dW2,dt]
+    tested_labels = ["d_w1 d_w1", "d_w1 d_w2", "d_w2 d_w1", "d_w2 d_w2", "d_w1", "d_w2", "d_t"]
+    target_means = jnp.array(
+        [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
+    )
+    target_mean_products = jnp.array(
+        [
+            pychastic.wiener_integral_moments.E2(idx, idy)(1)
+            for (idx, idy) in itertools.product(tested_integrals, tested_integrals)
+        ]
+    )
 
-        dz_list = []
-        for t in range(T):
-            dz_list.append( w.get_z(float(t),float(t+1)) )
+    samples_exponent = 14
+    z_score_cutoff = 5
 
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
+    seed = 0
+    key = jax.random.PRNGKey(seed)
+    sample_integrals = pychastic.vectorized_I_generation.get_wiener_integrals(
+        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2
+    )
 
-        var = np.var(np.array(dz_list))
-        covar = np.correlate(np.array(dz_list),np.array(dw_list))[0] / (len(dw_list)-1)
+    sample_integrals = jnp.array(
+        [
+            sample_integrals["d_ww"][:,0,0],
+            sample_integrals["d_ww"][:,0,1],
+            sample_integrals["d_ww"][:,1,0],
+            sample_integrals["d_ww"][:,1,1],
+            sample_integrals["d_w"][:, 0],
+            sample_integrals["d_w"][:, 1],
+            jnp.ones_like(sample_integrals["d_w"][:, 0]),
+        ]
+    ).T
 
-        self.assertAlmostEqual( var , 1.0/3.0 , delta=5.0/np.sqrt(T), 
-               msg = f'Variance of Z increments incorrect: {var}')
+    sample_means = jnp.mean(sample_integrals, axis=0)
+    sample_mean_products = jnp.array(
+        [
+            jnp.mean(x * y)
+            for (x, y) in itertools.product(sample_integrals.T, sample_integrals.T)
+        ]
+    )
 
-        self.assertAlmostEqual( covar , 1.0/2.0 , delta=5.0/np.sqrt(T), 
-               msg = f'Covariance of Z increments incorrect')
+    means_close = jnp.isclose(
+        sample_means, target_means, atol=z_score_cutoff * 2 ** (-samples_exponent / 2)
+    )
+    means_error = sample_means - target_means
+    assert means_close.all(), "Expected values incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(means_close, means_error, tested_labels)
+        }
+    )
+
+    products_close = jnp.isclose(
+        sample_mean_products,
+        target_mean_products,
+        atol=z_score_cutoff * 2 ** (-samples_exponent / 2),
+    )
+    products_error = sample_mean_products - target_mean_products
+    assert products_close.all(), "Expected products incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(
+                products_close,
+                products_error,
+                itertools.product(tested_labels, tested_labels),
+            )
+        }
+    )
+
+def test_integral_generation_wagner_platen_1d():
+    tested_scheme = "wagner_platen"
+
+    # Prepare values of means and second moments = E(XY)
+    tested_integrals = [[1,1,1], [1,0], [0,1] , [1,1], [1], [0]]  # [dW1,dW2,dt]
+    tested_labels = ["d_www","d_wt","d_tw","d_ww","d_w","d_t"]
+    target_means = jnp.array(
+        [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
+    )
+    target_mean_products = jnp.array(
+        [
+            pychastic.wiener_integral_moments.E2(idx, idy)(1)
+            for (idx, idy) in itertools.product(tested_integrals, tested_integrals)
+        ]
+    )
+
+    samples_exponent = 14
+    z_score_cutoff = 5
+
+    seed = 0
+    key = jax.random.PRNGKey(seed)
+    sample_integrals = pychastic.vectorized_I_generation.get_wiener_integrals(
+        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=1
+    )
+
+    sample_integrals = jnp.array(
+        [
+            sample_integrals["d_www"][:,0,0,0],
+            sample_integrals["d_wt"][:,0,0],
+            sample_integrals["d_tw"][:,0,0],
+            sample_integrals["d_ww"][:,0,0],
+            sample_integrals["d_w"][:, 0],
+            jnp.ones_like(sample_integrals["d_w"][:, 0]),
+        ]
+    ).T
+
+    sample_means = jnp.mean(sample_integrals, axis=0)
+    sample_mean_products = jnp.array(
+        [
+            jnp.mean(x * y)
+            for (x, y) in itertools.product(sample_integrals.T, sample_integrals.T)
+        ]
+    )
+
+    means_close = jnp.isclose(
+        sample_means, target_means, atol=z_score_cutoff * 2 ** (-samples_exponent / 2)
+    )
+    means_error = sample_means - target_means
+    assert means_close.all(), "Expected values incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(means_close, means_error, tested_labels)
+        }
+    )
+
+    products_close = jnp.isclose(
+        sample_mean_products,
+        target_mean_products,
+        atol=z_score_cutoff * 2 ** (-samples_exponent / 2),
+    )
+    products_error = sample_mean_products - target_mean_products
+    assert products_close.all(), "Expected products incorrect \n" + str(
+        {
+            label: (bool(flag), float(error))
+            for (flag, error, label) in zip(
+                products_close,
+                products_error,
+                itertools.product(tested_labels, tested_labels),
+            )
+        }
+    )
+
+if __name__ == "__main__":
+    test_integral_generation_euler()
 
 
-    def test_increment_variance(self):
-        w = WienerWithZ()
-        T = 100
-        points = list(range(T))
-
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
-
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-
-        var = np.var(np.array(dw_list))
-
-        self.assertAlmostEqual( var , 1 , delta=5.0/np.sqrt(T), 
-               msg = f'Variance of Wiener increments incorrect: {var}')
-
-        # add points in order
-        dt = 0.01
-        np.arange(0, T, dt)
-        values = [w.get_w(t) for t in points]
-
-        dw_list = []
-        for t in np.arange(0, T, dt):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-
-        var = np.var(dw_list)
-
-        self.assertAlmostEqual( var , dt , delta=5.0*np.sqrt(len(np.arange(0, T, dt))), 
-               msg = f'Variance of Wiener increments incorrect: {var}')
-
-    def test_autocovariance(self):
-        w = WienerWithZ()
-        T = 100
-        points = list(range(T))
-
-        # add points to lookup in random order
-        random.shuffle(points)
-        for t in points:
-            w.get_w(float(t))
-
-        dw_list = []
-        for t in range(T):
-            dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-        dw_list = np.array(dw_list)
-
-        #Compute covariance of two random samples
-        cov = np.correlate(dw_list[1:],dw_list[:-1])[0] / (len(dw_list)-2)
-
-        self.assertAlmostEqual( cov , 0 , delta=5.0/np.sqrt(T), 
-               msg = f'Autocovariance of Wiener increments incorrect: {cov}')
-
-
-    def test_vector_double_integrals(self):
-        """
-        E(I_12) = 0, E(I_12 ^2) = h^2 / 2
-        E(I_12 I_13) = E(I_1 I_12) = E(I_12 I_21) = 0
-        I_12 + I_21 = I_1 * I_2
-        """
-        return #unfinished test below
-        #w = VectorWiener(noiseterms=2)
-        #T = 100
-        #points = list(range(T))
-        #for t in points:
-        #    w.get_w(float(t))
-        #
-        #dw_list = []
-        #for t in range(T):
-        #    dw_list.append( w.get_w(float(t+1)) - w.get_w(float(t)))
-        #dw_list = np.array(dw_list)
-
-class TestVectorWienerWithI(unittest.TestCase):
-    def testIMoments(self):
-        w = VectorWienerWithI(noiseterms=2)
-        n = 10000
-        dt = 0.1
-        sigma = dt/np.sqrt(2)
-        points = np.arange(n+1)*dt
-        for t in points:
-            w.get_w(t)
-        
-        data = np.stack([w.get_I_matrix(points[i], points[i+1]) for i in range(len(points)-1)])
-        assert np.isclose(data.mean(axis=0),[
-            [0, 0],
-            [0, 0]
-        ], atol=5*sigma/np.sqrt(n)).all()
-
-        m11 = dt**2/2
-        m12 = dt**2/2
-        assert np.isclose((data**2).mean(axis=0),[
-            [m11, m12],
-            [m12, m11]
-        ], atol=5*sigma/np.sqrt(n)).all()
-
-        
-        m11 = 15/4*dt**4
-        m12 = 7/4*dt**4
-        assert np.isclose((data**4).mean(axis=0),[
-            [m11, m12],
-            [m12, m11]
-        ], atol=5*68*dt**4).all()
-
-
-if __name__ == '__main__':
-    #np.random.seed(0)
-    unittest.main()
-'''
+#     tested_integrals = [[1],[2],[0],[1,1],[1,2],[1,0],[2,0],[0,1],[0,2],[1,1,1]]

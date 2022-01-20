@@ -1,4 +1,3 @@
-from os import environ
 import jax
 import pytest
 from pychastic.sde_solver import SDESolver

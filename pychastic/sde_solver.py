@@ -5,7 +5,6 @@ import jax.numpy as jnp
 import numpy as np
 from tqdm import tqdm
 from pychastic.sde_problem import SDEProblem
-import pychastic.utils
 import pychastic.wiener_integral_moments
 from functools import wraps
 import jax
@@ -135,7 +134,7 @@ class SDESolver:
             return wrapped
 
         def L(f, idx):
-            for x in idx:
+            for x in reversed(idx):
                 if x == "t":
                     f = L_t(f)
                 elif x == "w":
@@ -193,7 +192,9 @@ class SDESolver:
             
             wiener_integrals = input_
             wiener_integrals['d_w'] *= jax.numpy.sqrt(self.dt)
-            wiener_integrals['d_ww'] *= self.dt
+            
+            if self.scheme == 'milstein':
+                wiener_integrals['d_ww'] *= self.dt
 
             if self.scheme == 'wagner_platen':
                 wiener_integrals['d_wt']  *= self.dt**(3/2)
