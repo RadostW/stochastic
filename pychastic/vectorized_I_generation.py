@@ -83,6 +83,11 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         dI_scaled = vectorized_fill_diagonal(
             Imat_nodiag, 0.5 * (xi ** 2 - 1).squeeze()
         )  # Diagonal entries work differently
+        
+        return {
+                'd_w': dW_scaled,
+                'd_ww': dI_scaled
+            }
     
     elif scheme == 'wagner_platen':
         if noise_terms == 1:
