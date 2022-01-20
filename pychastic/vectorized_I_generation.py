@@ -15,7 +15,7 @@ vectorized_fill_diagonal = jax.vmap(fill_diagonal, in_axes=(0, 0))
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     """
     Calculate moments of principal wiener integrals.
-    
+
     Parameters
     ----------
     key : jax.PRNGKey
@@ -28,7 +28,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         controls order of integrals generated and method of generation
     p : int, optional
         controls series truncation
-        
+
     Returns
     -------
     dict
@@ -36,29 +36,29 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     """
     if scheme == 'euler' or (scheme == 'milstein' and noise_terms == 1):
         dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
-        
+
         if scheme == 'euler':
             return {
                 'd_w' : dW_scaled
             }
-        
+
         dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis] # noise_terms == 1 is special
-        
+
         if scheme == 'milstein':
             return {
                 'd_w' : dW_scaled,
                 'd_ww' : dI_scaled
             }
     elif scheme == 'milstein':
-        key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
+        key1, key2, key3, key4 = jax.random.split(key, num=4)
         xi = jax.random.normal(key1, shape=(steps, 1,noise_terms))
-        dW_scaled = xi.squeeze()#jax.random.normal(key2, shape=(steps,noise_terms))
+        dW_scaled = xi.squeeze() #jax.random.normal(key2, shape=(steps,noise_terms))
 
-        mu = jax.random.normal(key3, shape=(steps, 1,noise_terms))
+        mu = jax.random.normal(key2, shape=(steps, 1,noise_terms))
 
-        eta = jax.random.normal(key4, shape=(steps, p,noise_terms))
+        eta = jax.random.normal(key3, shape=(steps, p,noise_terms))
 
-        zeta = jax.random.normal(key5, shape=(steps, p,noise_terms))
+        zeta = jax.random.normal(key4, shape=(steps, p,noise_terms))
 
         rec = 1 / jax.numpy.arange(1, p + 1)  # 1/r vector
         rho = 1 / 12 - (rec ** 2).sum() / (2 * jax.numpy.pi ** 2)
@@ -83,19 +83,19 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         dI_scaled = vectorized_fill_diagonal(
             Imat_nodiag, 0.5 * (xi ** 2 - 1).squeeze()
         )  # Diagonal entries work differently
-        
+
         return {
                 'd_w': dW_scaled,
                 'd_ww': dI_scaled
             }
-    
+
     elif scheme == 'wagner_platen':
         if noise_terms == 1:
 
             u = jax.random.normal(key, shape=(2, steps, noise_terms))
             dW_scaled = u[0]
             dZ_scaled = 0.5*(u[0] + 3**(-0.5)*u[1])[..., jax.numpy.newaxis]
-            
+
             dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
 
             return {
@@ -108,7 +108,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
 
         else:
             raise NotImplementedError
-    
+
     else:
         raise NotImplementedError
 
