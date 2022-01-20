@@ -14,7 +14,7 @@ Uses `jax`, `jax.jit` and `jax.grad` for performace and ease of use.
 
 ```Python
 import pychastic
-problem = problem = pychastic.sde_problem.SDEProblem(lambda x: 0.2*x,lambda x: 0.5*x,1.0,2.0)
+problem = pychastic.sde_problem.SDEProblem(lambda x: 0.2*x,lambda x: 0.5*x,1.0,2.0)
 solver = pychastic.sde_solver.SDESolver()
 trajectory = solver.solve(problem)
 
