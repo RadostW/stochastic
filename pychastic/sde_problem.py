@@ -93,5 +93,3 @@ class SDEProblem:
     # exact solution validation
     # TODO
     self.exact_solution = exact_solution
-
-SDEProblem(lambda x: 1, lambda x: 2, 3, 4)
