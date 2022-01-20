@@ -12,12 +12,43 @@ vectorized_fill_diagonal = jax.vmap(fill_diagonal, in_axes=(0, 0))
 
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
-
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
+    """
+    Calculate moments of principal wiener integrals.
+    
+    Parameters
+    ----------
+    key : jax.PRNGKey
+        source of randomness
+    steps : int, optional
+        number of steps
+    noise_terms : int, optional
+        wiener process dimension
+    scheme : ('euler' or 'milstein' or 'wagner_platen')
+        controls order of integrals generated and method of generation
+    p : int, optional
+        controls series truncation
+        
+    Returns
+    -------
+    dict
+        Keys are like 'd_w' or 'd_wt' and values are `jnp.arrays`
+    """
     if scheme == 'euler' or (scheme == 'milstein' and noise_terms == 1):
         dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
-        dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis]
-    
+        
+        if scheme == 'euler':
+            return {
+                'd_w' : dW_scaled
+            }
+        
+        dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis] # noise_terms == 1 is special
+        
+        if scheme == 'milstein':
+            return {
+                'd_w' : dW_scaled,
+                'd_ww' : dI_scaled
+            }
     elif scheme == 'milstein':
         key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
         xi = jax.random.normal(key1, shape=(steps, 1,noise_terms))
@@ -75,11 +106,6 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
     
     else:
         raise NotImplementedError
-
-    return {
-        'd_w': dW_scaled,
-        'd_ww': dI_scaled
-    }
 
 if __name__ == '__main__':
     seed = 0
