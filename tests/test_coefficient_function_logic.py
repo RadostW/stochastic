@@ -14,7 +14,6 @@ tmax = 1.0,
 x0 = jnp.array(0.)
 )
 
-from pychastic.sde_solver import contract_all
 from pychastic.sde_solver import tensordot1
 from pychastic.sde_solver import tensordot2
 
