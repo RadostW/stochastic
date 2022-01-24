@@ -23,8 +23,6 @@ options.
 How to install
 ''''''''''''''
 
-(THIS SECTION REQUIRES UPDATING AFTER PUBLISHING)
-
 Easiest way to get the package from PyPi is using pip. Simply run:
 
 .. prompt:: bash $ auto
