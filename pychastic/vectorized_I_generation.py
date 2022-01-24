@@ -10,7 +10,6 @@ vectorized_fill_diagonal = jax.vmap(fill_diagonal, in_axes=(0, 0))
 
 
 def fill_indices(mat, indices, vec):
-    (n, _) = mat.shape
     i, j = indices
     return mat.at[i, j].set(vec)
 vectorized_fill_indices = jax.vmap(fill_indices, in_axes=(0, 0))
@@ -130,9 +129,16 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         phi = jax.random.normal(key5, shape=(steps, noise_terms))
         
         rec = 1.0/jnp.arange(1,p+1)[jnp.newaxis,:] # 1/r vector
+        
+        r_vec = jnp.arange(1,p+1)
+        c_mat_coeffs = (r_vec[:,jnp.newaxis]/((r_vec[:,jnp.newaxis]**2 - r_vec[jnp.newaxis,:]**2)+jnp.eye(p)))*(1 - jnp.eye(p))[jnp.newaxis,:,:] # 1(r!=l) * r / (r**2 - l**2)
+        
         rho = (1.0/ 12.0) - (rec ** 2).sum() / (2 * jax.numpy.pi ** 2)
+        alpha = (jnp.pi**2 / 180.0) - (0.5 / jnp.pi**2) * (rec**4).sum()
         
         a_vec = (- jnp.sqrt(2)/jnp.pi* jnp.sum( rec[:,:,jnp.newaxis]*zeta , axis = 1) - 2*jnp.sqrt(rho)*mu )
+        b_vec = (1 / jnp.sqrt(2) ) *  jnp.sum( (rec[:,:,jnp.newaxis]**2) * eta  , axis = 1) + jnp.sqrt(alpha)*phi
+        
         A_mat = (0.5 / jnp.pi)*jnp.sum(
             rec[:,:,jnp.newaxis,jnp.newaxis] * (
                 zeta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
@@ -140,13 +146,22 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 ) ,
             axis=1
         )
+        B_mat = (1.0 / (4.0 * jnp.pi**2)) * jnp.sum( (rec[:,:,jnp.newaxis,jnp.newaxis]**2) * (
+                zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:] 
+                + eta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
+            ) , axis = 1)
+        C_mat = -(1.0 / (2.0 * jnp.pi**2)) * jnp.sum( c_mat_coeffs[:,:,:,jnp.newaxis,jnp.newaxis] * (
+                zeta[:,:,jnp.newaxis,:,jnp.newaxis] * zeta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,jnp.newaxis,:,jnp.newaxis,jnp.newaxis]
+                - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis]
+            ) , axis = (1,2) )
+        D_mat = jnp.zeros((noise_terms,noise_terms,noise_terms)) # TODO:NotImplementedError
         
         dW_scaled = xi.squeeze()
         dWT_scaled = 0.5*(xi+a_vec)[:,:,jnp.newaxis] # time axes have dim=1
         dTW_scaled = dW_scaled[:,jnp.newaxis,:] - jnp.transpose(dWT_scaled, axes = (0,2,1))
         
         #J_mat = NotImplementedError # check Kloeden-Platen (5.8.11)
-        J_mat = jnp.zeros((steps,noise_terms,noise_terms,noise_terms))
+        J_mat = jnp.zeros((steps,noise_terms,noise_terms,noise_terms)) # TODO:NotImplementedError
         
         dWW_diag_scaled = 0.5*(dW_scaled**2-1.0) # only diagonal elements
         dWWW_diag_scaled = J_mat
