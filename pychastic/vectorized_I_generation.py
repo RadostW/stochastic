@@ -194,7 +194,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         D_mat_coeffs2 = (1.0 / ( double_pad_vec(r_vec2) * sliding_sum( r_vec ) ))[jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] # 1 / l (r+l)
         sgn_coeffs =  (jnp.tri(p).T-jnp.tri(p))[jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] # sgn(l-r)
             
-        D_mat = jnp.zeros((noise_terms,noise_terms,noise_terms)) = (1.0 / (jnp.pi**2 * 2.0**(5/2)) * jnp.sum(
+        D_mat = (1.0 / (jnp.pi**2 * 2.0**(5/2)) * jnp.sum(
             D_mat_coeffs * ( zeta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
                     double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:] * sgn_coeffs +
                     double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
@@ -205,7 +205,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                     double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
                 )
                 )
-        axis = (1,2))
+        , axis = (1,2))
         +
         jnp.sum(
             D_mat_coeffs2 * ( zeta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
@@ -217,19 +217,14 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                     double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:] +
                     double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
                 )
-            )                
-            )    
+            )                    
         , axis = (1,2))
         )
 
-
-        
         dW_scaled = xi.squeeze()
         dWT_scaled = 0.5*(xi+a_vec)[:,:,jnp.newaxis] # time axes have dim=1
         dTW_scaled = dW_scaled[:,jnp.newaxis,:] - jnp.transpose(dWT_scaled, axes = (0,2,1))
         
-        #J_mat = NotImplementedError # check Kloeden-Platen (5.8.11)
-        J_mat = jnp.zeros((steps,noise_terms,noise_terms,noise_terms)) # TODO:NotImplementedError
         
         dWW_diag_scaled = 0.5*(dW_scaled**2-1.0) # only diagonal elements
         dWWW_diag_scaled = J_mat
@@ -243,6 +238,27 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 
         
         dWW_scaled = vectorized_fill_diagonal(dWW_nodiag_scaled , dWW_diag_scaled)
+        
+        J_tww = (
+            (1.0 / 6.0) * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:] 
+            - (1.0 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:] 
+            + B_mat 
+            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,jnp.newaxis,:]
+            + (0.5 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:]
+            + C_mat
+            + 0.5 * A_mat
+            )
+        
+        #J_mat = NotImplementedError # check Kloeden-Platen (5.8.11)
+        J_mat = (
+            xi[:,:,jnp.newaxis,jnp.newaxis] * J_tww[:,jnp.newaxis,:,:]
+            + 0.5 * a_vec[:,:,jnp.newaxis,jnp.newaxis] * dWW[:,jnp.newaxis,:,:]
+            + (0.5 / jnp.pi) * b_vec[:,:,jnp.newaxis,jnp.newaxis] * xi[:,jnp.newaxis,:,jnp.newaxis] * xi[:,jnp.newaxis,jnp.newaxis,:]
+            - xi[:,jnp.newaxis,:,jnp.newaxis] * B_mat[:,:,jnp.newaxis,:]
+            + xi[:,jnp.newaxis,jnp.newaxis,:] * (0.5 * A_mat[:,:,:,jnp.newaxis] - jnp.transpose(C_mat, axes = (0,2,1))[:,:,:,jnp.newaxis])
+            + D_mat
+            )
+        
         
         dWWW_scaled = jnp.zeros_like(J_mat)
         
