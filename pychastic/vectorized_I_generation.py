@@ -14,6 +14,28 @@ def fill_indices(mat, indices, vec):
     return mat.at[i, j].set(vec)
 vectorized_fill_indices = jax.vmap(fill_indices, in_axes=(0, 0))
 
+def sliding_sum(vec):
+    n = vec.shape[0]
+    vec1 = jnp.pad(vec, ((0, n+1),))
+    vec2 = jnp.tile(vec1, (n, 1))
+    vec3 = vec2.flatten()
+    vec4 = vec3[:2*n**2]
+    mat = vec4.reshape(n, 2*n)[::-1, n:]
+    return mat
+
+sliding_sum = jnp.vectorize(sliding_sum, signature='(k)->(k,k)')
+
+def sliding_abs(vec):
+    n = vec.shape[0]
+    vec1 = jnp.pad(vec, ((1, n),))
+    mat = jnp.tile(vec1, (n, 1)).flatten()[:2*n**2].reshape(n, 2*n)[:, :n]
+    mat2 = mat + mat.T
+    return mat2
+
+sliding_abs = jnp.vectorize(sliding_abs, signature='(k)->(k,k)')
+
+
+
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
@@ -155,6 +177,8 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis]
             ) , axis = (1,2) )
         D_mat = jnp.zeros((noise_terms,noise_terms,noise_terms)) # TODO:NotImplementedError
+
+
         
         dW_scaled = xi.squeeze()
         dWT_scaled = 0.5*(xi+a_vec)[:,:,jnp.newaxis] # time axes have dim=1
