@@ -34,7 +34,11 @@ def sliding_abs(vec):
 
 sliding_abs = jnp.vectorize(sliding_abs, signature='(k)->(k,k)')
 
+def double_pad(tensor):
+    return jnp.pad(tensor, [(0, 0), (0, tensor.shape[1]), (0, 0)])
 
+def double_pad_vec(vec):
+    return jnp.pad(vec, [(0, vec.shape[0])])
 
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
@@ -153,7 +157,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         rec = 1.0/jnp.arange(1,p+1)[jnp.newaxis,:] # 1/r vector
         
         r_vec = jnp.arange(1,p+1)
-        c_mat_coeffs = (r_vec[:,jnp.newaxis]/((r_vec[:,jnp.newaxis]**2 - r_vec[jnp.newaxis,:]**2)+jnp.eye(p)))*(1 - jnp.eye(p))[jnp.newaxis,:,:] # 1(r!=l) * r / (r**2 - l**2)
+        C_mat_coeffs = (r_vec[:,jnp.newaxis]/((r_vec[:,jnp.newaxis]**2 - r_vec[jnp.newaxis,:]**2)+jnp.eye(p)))*(1 - jnp.eye(p))[jnp.newaxis,:,:] # 1(r!=l) * r / (r**2 - l**2)
         
         rho = (1.0/ 12.0) - (rec ** 2).sum() / (2 * jax.numpy.pi ** 2)
         alpha = (jnp.pi**2 / 180.0) - (0.5 / jnp.pi**2) * (rec**4).sum()
@@ -172,11 +176,51 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:] 
                 + eta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
             ) , axis = 1)
-        C_mat = -(1.0 / (2.0 * jnp.pi**2)) * jnp.sum( c_mat_coeffs[:,:,:,jnp.newaxis,jnp.newaxis] * (
+        C_mat = -(1.0 / (2.0 * jnp.pi**2)) * jnp.sum( C_mat_coeffs[:,:,:,jnp.newaxis,jnp.newaxis] * (
                 zeta[:,:,jnp.newaxis,:,jnp.newaxis] * zeta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,jnp.newaxis,:,jnp.newaxis,jnp.newaxis]
                 - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis]
             ) , axis = (1,2) )
-        D_mat = jnp.zeros((noise_terms,noise_terms,noise_terms)) # TODO:NotImplementedError
+            
+        def sliding_abs_alt(ten):
+            return jnp.transpose(sliding_abs(jnp.transpose(ten,axes = (0,2,1))), axes = (0,2,3,1))
+            
+        def sliding_sum_alt(ten):
+            return jnp.transpose(sliding_sum(jnp.transpose(ten,axes = (0,2,1))), axes = (0,2,3,1))
+       
+        r_vec2 = r_vec[:,jnp.newaxis]
+        l_vec2 = r_vec[jnp.newaxis,:]
+       
+        D_mat_coeffs =  ((1.0 / ( double_pad_vec(l_vec2) * sliding_abs( r_vec ) + jnp.eye(p) )) * (1 - jnp.eye(p)) )[jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] # 1 / r (r-l)
+        D_mat_coeffs2 = (1.0 / ( double_pad_vec(r_vec2) * sliding_sum( r_vec ) ))[jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] # 1 / l (r+l)
+        sgn_coeffs =  (jnp.tri(p).T-jnp.tri(p))[jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] # sgn(l-r)
+            
+        D_mat = jnp.zeros((noise_terms,noise_terms,noise_terms)) = (1.0 / (jnp.pi**2 * 2.0**(5/2)) * jnp.sum(
+            D_mat_coeffs * ( zeta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
+                    double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:] * sgn_coeffs +
+                    double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
+                )
+                +
+                eta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
+                    - double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:] * sgn_coeffs +
+                    double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_abs_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
+                )
+                )
+        axis = (1,2))
+        +
+        jnp.sum(
+            D_mat_coeffs2 * ( zeta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
+                   - double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:] +
+                    double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
+                )
+                +
+                eta[:,:,jnp.newaxis,jnp.newaxis,:,jnp.newaxis] * (
+                    double_pad(zeta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(zeta)[:,:,:,jnp.newaxis,jnp.newaxis,:] +
+                    double_pad(eta)[:,jnp.newaxis,:,:,jnp.newaxis,jnp.newaxis] * sliding_sum_alt(eta)[:,:,:,jnp.newaxis,jnp.newaxis,:]
+                )
+            )                
+            )    
+        , axis = (1,2))
+        )
 
 
         
