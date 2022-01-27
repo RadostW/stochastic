@@ -44,3 +44,15 @@ def test_sliding_abs():
         for j in range(dim2):
             for k in range(dim2):
                 assert res_mat[i,j,k] == (test_mat[i,abs((j+1)-(k+1))-1] if abs((j+1)-(k+1))-1 in range(dim2) else 0)
+
+
+def test_make_D_mat():
+    noiseterms = 2
+    p = 3
+    eta = jnp.arange(noiseterms*p).reshape(noiseterms, p)
+    zeta = 2*jnp.arange(noiseterms*p).reshape(noiseterms, p)
+
+    D_mat = pychastic.vectorized_I_generation.make_D_mat(eta, zeta)
+    D_mat_loopy = pychastic.vectorized_I_generation.make_D_mat_loopy(eta, zeta)
+
+    assert (D_mat == D_mat_loopy).all()

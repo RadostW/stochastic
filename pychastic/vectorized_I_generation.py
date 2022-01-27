@@ -53,6 +53,87 @@ def make_l_plus_r_mat(p):
     mat = 1/(l*r+l)
     return mat
 
+def make_D_mat_loopy(eta, zeta):
+    assert eta.ndim == 2
+    assert eta.shape == zeta.shape
+    noiseterms, p = eta.shape
+
+    def take(tensor, j, idx):
+        if idx > p:
+            return 0
+        else:
+            return tensor[j, idx-1]
+
+    D_mat = jnp.zeros((noiseterms, noiseterms, noiseterms))
+    for j1 in range(noiseterms):
+        for j2 in range(noiseterms):
+            for j3 in range(noiseterms):
+                # first sum
+                for r in range(1, p+1):
+                    for l in range(1, p+1):
+                        D_mat = D_mat.at[j1, j2, j3].add( -1/(l*(l+r))*(
+                            take(zeta, j2, l)*(take(zeta, j3, l+r)*take(eta, j1, r) - take(zeta, j3, r)*take(eta, j1, l+r)) +
+                            take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l+r) + take(eta, j1, r)*take(eta, j3, l+r))
+                        ))
+
+                continue # TODO: don't ignore sums below
+                # second sum
+                for l in range(1, p+1):
+                    for r in range(1, l-1+1):
+                        D_mat.at[j1, j2, j3].add( 1/(r*(l-r))*(
+                            take(zeta, j2, l)*(take(zeta, j1, r)*take(eta, j3, l-r) + take(zeta, j3, l-r)*take(eta, j1, r)) -
+                            take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l-r) - take(eta, j1, r)*take(eta, j3, l-r))
+                        ))
+                
+                
+                # third sum
+                for l in range(1, p+1):
+                    for r in range(l+1, 2*p+1):
+                        D_mat.at[j1, j2, j3].add( 1/(r*(r-l))*(
+                            take(zeta, j2, l)*(take(zeta, j3, r-l)*take(eta, j1, r) - take(zeta, j1, r)*take(eta, j3, r-l)) +
+                            take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, r-l) + take(eta, j1, r)*take(eta, j3, r-l))
+                        ))
+    
+    D_mat *= 1/(jnp.pi**2*2**(5/2))
+    return D_mat
+
+def make_D_mat(eta, zeta):
+    assert eta.ndim == 2
+    assert eta.shape == zeta.shape
+    m, p = eta.shape
+
+    D_mat = jnp.zeros((m, m, m))
+
+    # summands shape: (m, m, m, l, r)
+
+    def take(tensor, idx):
+        illegal = idx > p
+        return tensor[..., idx-1].at[..., illegal].set(0)
+
+    # first sum
+    l = jnp.arange(1, p+1).reshape(p, 1)
+    r = jnp.arange(1, p+1).reshape(1, p)
+    
+    summands = 1/(l*(l+r))*(
+        zeta.reshape(1, m, 1, p, 1)*(
+            take(zeta, l+r).reshape(1, 1, m, p, p)*eta.reshape(m, 1, 1, 1, p) - 
+            zeta.reshape(1, 1, m, 1, p)*take(eta, l+r).reshape(m, 1, 1, p, p)
+        ) +
+        eta.reshape(1, m, 1, p, 1)*(
+            zeta.reshape(m, 1, 1, 1, p)*take(zeta, l+r).reshape(1, 1, m, p, p) +
+            eta.reshape(m, 1, 1, 1, p)*take(eta, l+r).reshape(1, 1, m, p, p)
+        )
+    )
+    D_mat -= summands.sum(axis=(-2, -1))
+
+    # TODO second and third sum
+    
+    D_mat *= 1/(jnp.pi**2*2**(5/2))
+    return D_mat
+
+
+                
+
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
 def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
