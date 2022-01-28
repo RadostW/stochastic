@@ -76,7 +76,6 @@ def make_D_mat_loopy(eta, zeta):
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l+r) + take(eta, j1, r)*take(eta, j3, l+r))
                         ))
 
-                continue # TODO: don't ignore sums below
                 # second sum
                 for l in range(1, p+1):
                     for r in range(1, l-1+1):
@@ -102,33 +101,50 @@ def make_D_mat(eta, zeta):
     assert eta.shape == zeta.shape
     m, p = eta.shape
 
-    D_mat = jnp.zeros((m, m, m))
+    def take(tensor, idx, fill = 0):
+        illegal = jnp.logical_or(idx > p,idx < 1)
+        return tensor[..., idx-1].at[..., illegal].set(fill)
 
-    # summands shape: (m, m, m, l, r)
-
-    def take(tensor, idx):
-        illegal = idx > p
-        return tensor[..., idx-1].at[..., illegal].set(0)
-
-    # first sum
+    # first term
+    # summands shape: (m, m, m, p, p)
+    
     l = jnp.arange(1, p+1).reshape(p, 1)
     r = jnp.arange(1, p+1).reshape(1, p)
     
-    summands = 1/(l*(l+r))*(
+    summands_sum = 1/(l*(l+r))*(
         zeta.reshape(1, m, 1, p, 1)*(
-            take(zeta, l+r).reshape(1, 1, m, p, p)*eta.reshape(m, 1, 1, 1, p) - 
-            zeta.reshape(1, 1, m, 1, p)*take(eta, l+r).reshape(m, 1, 1, p, p)
-        ) +
-        eta.reshape(1, m, 1, p, 1)*(
-            zeta.reshape(m, 1, 1, 1, p)*take(zeta, l+r).reshape(1, 1, m, p, p) +
-            eta.reshape(m, 1, 1, 1, p)*take(eta, l+r).reshape(1, 1, m, p, p)
+            take(zeta, l+r).reshape(1, 1, m, p, p) * eta.reshape(m, 1, 1, 1, p) 
+            - zeta.reshape(1, 1, m, 1, p) * take(eta, l+r).reshape(m, 1, 1, p, p)
+        ) 
+        + eta.reshape(1, m, 1, p, 1)*(
+            zeta.reshape(m, 1, 1, 1, p) * take(zeta, l+r).reshape(1, 1, m, p, p) 
+            + eta.reshape(m, 1, 1, 1, p) * take(eta, l+r).reshape(1, 1, m, p, p)
         )
     )
-    D_mat -= summands.sum(axis=(-2, -1))
+    D_mat_sum = summands_sum.sum(axis=(-2, -1))
 
-    # TODO second and third sum
+    # second and third term
+    # summands shape: (m, m, m, p, 2p)
     
-    D_mat *= 1/(jnp.pi**2*2**(5/2))
+    l = jnp.arange(1, p+1).reshape(p, 1)
+    r = jnp.arange(1, 2*p+1).reshape(1, 2*p) # note rectangular sum
+
+    summands_diff = (l-r != 0) * 1.0/(
+        r*take(r,jnp.abs(l-r),fill=1.0)
+        )*(
+        zeta.reshape(1, m, 1, p, 1)*(
+            jnp.sign(l-r) * take(zeta, jnp.abs(l-r)).reshape(1, 1, m, p, 2*p) * take(eta,r).reshape(m, 1, 1, 1, 2*p)
+            + take(zeta,r).reshape(1, 1, m, 1, 2*p) * take(eta, jnp.abs(l-r)).reshape(m, 1, 1, p, 2*p)
+        ) 
+        + eta.reshape(1, m, 1, p, 1)*(
+            - jnp.sign(l-r) * take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, jnp.abs(l-r)).reshape(1, 1, m, p, 2*p) 
+            + jnp.sign(l-r) * take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, jnp.abs(l+r)).reshape(1, 1, m, p, 2*p)
+        )
+    )
+    D_mat_diff = summands_diff.sum(axis=(-2, -1))
+
+    
+    D_mat = 1/(jnp.pi**2*2**(5/2)) * (-D_mat_sum + D_mat_diff)
     return D_mat
 
 
