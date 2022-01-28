@@ -65,6 +65,7 @@ def make_D_mat_loopy(eta, zeta):
             return tensor[j, idx-1]
 
     D_mat = jnp.zeros((noiseterms, noiseterms, noiseterms))
+
     for j1 in range(noiseterms):
         for j2 in range(noiseterms):
             for j3 in range(noiseterms):
@@ -79,17 +80,15 @@ def make_D_mat_loopy(eta, zeta):
                 # second sum
                 for l in range(1, p+1):
                     for r in range(1, l-1+1):
-                        D_mat.at[j1, j2, j3].add( 1/(r*(l-r))*(
+                        D_mat = D_mat.at[j1, j2, j3].add( 1/(r*(l-r))*(
                             take(zeta, j2, l)*(take(zeta, j1, r)*take(eta, j3, l-r) + take(zeta, j3, l-r)*take(eta, j1, r)) -
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l-r) - take(eta, j1, r)*take(eta, j3, l-r))
                         ))
                 
-                continue
-                
                 # third sum
                 for l in range(1, p+1):
                     for r in range(l+1, 2*p+1):
-                        D_mat.at[j1, j2, j3].add( 1/(r*(r-l))*(
+                        D_mat = D_mat.at[j1, j2, j3].add( 1/(r*(r-l))*(
                             take(zeta, j2, l)*(take(zeta, j3, r-l)*take(eta, j1, r) - take(zeta, j1, r)*take(eta, j3, r-l)) +
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, r-l) + take(eta, j1, r)*take(eta, j3, r-l))
                         ))
@@ -145,8 +144,27 @@ def make_D_mat(eta, zeta):
     )
     D_mat_diff_lower = summands_diff_lower.sum(axis=(-2, -1))
 
+
+    # third term
+    # summands shape: (m, m, m, p, 2p)
+
+    summands_diff_upper = (r>l) * 1.0/(
+        r*take(r,r-l,fill=1.0)
+        )*(
+        zeta.reshape(1, m, 1, p, 1)*(
+            take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, r-l).reshape(1, 1, m, p, 2*p)
+            - take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, r-l).reshape(1, 1, m, p, 2*p) 
+
+        ) 
+        + eta.reshape(1, m, 1, p, 1)*(
+            take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, r-l).reshape(1, 1, m, p, 2*p) 
+            + take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, r-l).reshape(1, 1, m, p, 2*p)
+        )
+    )
+    D_mat_diff_upper = summands_diff_upper.sum(axis=(-2, -1))
+
     
-    D_mat = 1/(jnp.pi**2*2**(5/2)) * (-D_mat_sum + D_mat_diff_lower)
+    D_mat = 1/(jnp.pi**2*2**(5/2)) * (-D_mat_sum + D_mat_diff_lower + D_mat_diff_upper)
     return D_mat
 
 
