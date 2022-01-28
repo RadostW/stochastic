@@ -49,8 +49,27 @@ def test_sliding_abs():
 def test_make_D_mat():
     noiseterms = 2
     p = 3
-    eta = jnp.arange(noiseterms*p).reshape(noiseterms, p)
+    
+    eta = 0*jnp.arange(noiseterms*p).reshape(noiseterms, p)
     zeta = 2*jnp.arange(noiseterms*p).reshape(noiseterms, p)
+
+    D_mat = pychastic.vectorized_I_generation.make_D_mat(eta, zeta)
+    D_mat_loopy = pychastic.vectorized_I_generation.make_D_mat_loopy(eta, zeta)
+
+    assert jnp.allclose(D_mat, D_mat_loopy)
+    
+    
+    eta = 2*jnp.arange(noiseterms*p).reshape(noiseterms, p)
+    zeta = 0*jnp.arange(noiseterms*p).reshape(noiseterms, p)
+
+    D_mat = pychastic.vectorized_I_generation.make_D_mat(eta, zeta)
+    D_mat_loopy = pychastic.vectorized_I_generation.make_D_mat_loopy(eta, zeta)
+
+    assert jnp.allclose(D_mat, D_mat_loopy)
+    
+    
+    eta = 3*jnp.arange(noiseterms*p).reshape(noiseterms, p)
+    zeta = 5*jnp.arange(noiseterms*p).reshape(noiseterms, p)
 
     D_mat = pychastic.vectorized_I_generation.make_D_mat(eta, zeta)
     D_mat_loopy = pychastic.vectorized_I_generation.make_D_mat_loopy(eta, zeta)
