@@ -55,4 +55,7 @@ def test_make_D_mat():
     D_mat = pychastic.vectorized_I_generation.make_D_mat(eta, zeta)
     D_mat_loopy = pychastic.vectorized_I_generation.make_D_mat_loopy(eta, zeta)
 
-    assert (D_mat == D_mat_loopy).all()
+    assert jnp.allclose(D_mat, D_mat_loopy)
+
+if __name__ == "__main__":
+    test_make_D_mat()
