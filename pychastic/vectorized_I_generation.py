@@ -269,7 +269,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             ) , axis = 1)
         C_mat = -(1.0 / (2.0 * jnp.pi**2)) * jnp.sum( C_mat_coeffs[:,:,:,jnp.newaxis,jnp.newaxis] * (
                 zeta[:,:,jnp.newaxis,:,jnp.newaxis] * zeta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,jnp.newaxis,:,jnp.newaxis,jnp.newaxis]
-                - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis]
+                - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis] #TODO should be l/r NOT 1/r
             ) , axis = (1,2) )
             
         D_mat = vectorized_make_D_mat(eta.transpose((0, 2, 1)), zeta.transpose((0, 2, 1)))
@@ -293,15 +293,15 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         
         J_tww = (
             (1.0 / 6.0) * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:] 
-            - (1.0 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:] 
+            - (1.0 / jnp.pi) * xi[:,jnp.newaxis,:] * b_vec[:,:,jnp.newaxis] 
             + B_mat 
-            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,jnp.newaxis,:]
+            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,:,jnp.newaxis]
             + (0.5 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:]
             + C_mat
             + 0.5 * A_mat
             )
         
-        #J_mat = NotImplementedError # check Kloeden-Platen (5.8.11)
+        
         J_mat = (
             xi[:,:,jnp.newaxis,jnp.newaxis] * J_tww[:,jnp.newaxis,:,:]
             + 0.5 * a_vec[:,:,jnp.newaxis,jnp.newaxis] * dWW_scaled[:,jnp.newaxis,:,:]
