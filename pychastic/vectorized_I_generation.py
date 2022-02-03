@@ -15,6 +15,28 @@ def fill_indices(mat, indices, vec):
 vectorized_fill_indices = jax.vmap(fill_indices, in_axes=(0, 0))
 
 
+def make_C_mat(eta, zeta):
+    assert eta.ndim == 2
+    assert eta.shape == zeta.shape
+    m, p = eta.shape
+
+    l = jnp.arange(1, p+1).reshape(p, 1)
+    r = jnp.arange(1, p+1).reshape(1, p)
+
+    l_big = l.reshape(1, 1, p, 1)
+    r_big = l.reshape(1, 1, 1, p)
+
+    summands = (l != r) * r/(r**2-l**2+jnp.eye(p)) * (
+        (1/l_big) *    zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, r-1].reshape(1, m, p, 1) - 
+        (l_big/r_big) * eta[:, r-1].reshape(m, 1, 1, p)* eta[:, r-1].reshape(1, m, p, 1)    
+    )
+
+    C_mat = -1/(2*jnp.pi**2)*summands.sum(axis=(-2, -1))
+
+    return C_mat
+
+vectorized_make_C_mat = jax.vmap(make_C_mat)
+
 def make_D_mat_loopy(eta, zeta):
     assert eta.ndim == 2
     assert eta.shape == zeta.shape
@@ -247,9 +269,6 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         
         rec = 1.0/jnp.arange(1,p+1)[jnp.newaxis,:] # 1/r vector
         
-        r_vec = jnp.arange(1,p+1) # [1,2,..p] (p included)
-        C_mat_coeffs = (r_vec[:,jnp.newaxis]/((r_vec[:,jnp.newaxis]**2 - r_vec[jnp.newaxis,:]**2)+jnp.eye(p)))*(1 - jnp.eye(p))[jnp.newaxis,:,:] # 1(r!=l) * r / (r**2 - l**2)
-        
         rho = (1.0/ 12.0) - (rec ** 2).sum() / (2 * jax.numpy.pi ** 2)
         alpha = (jnp.pi**2 / 180.0) - (0.5 / jnp.pi**2) * (rec**4).sum()
         
@@ -267,10 +286,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:] 
                 + eta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
             ) , axis = 1)
-        C_mat = -(1.0 / (2.0 * jnp.pi**2)) * jnp.sum( C_mat_coeffs[:,:,:,jnp.newaxis,jnp.newaxis] * (
-                zeta[:,:,jnp.newaxis,:,jnp.newaxis] * zeta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,jnp.newaxis,:,jnp.newaxis,jnp.newaxis]
-                - eta[:,:,jnp.newaxis,:,jnp.newaxis] * eta[:,jnp.newaxis,:,jnp.newaxis,:] * rec[:,:,jnp.newaxis,jnp.newaxis,jnp.newaxis]
-            ) , axis = (1,2) )
+        C_mat = vectorized_make_C_mat(eta.transpose((0, 2, 1)), zeta.transpose((0, 2, 1)))
             
         D_mat = vectorized_make_D_mat(eta.transpose((0, 2, 1)), zeta.transpose((0, 2, 1)))
 
