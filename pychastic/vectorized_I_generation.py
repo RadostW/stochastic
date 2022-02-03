@@ -27,7 +27,7 @@ def make_C_mat(eta, zeta):
     r_big = l.reshape(1, 1, 1, p)
 
     summands = (l != r) * r/(r**2-l**2+jnp.eye(p)) * (
-        (1/l_big) * zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, l-1].reshape(1, m, p, 1) - 
+        (1/l_big) * zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, l-1].reshape(1, m, p, 1) + 
         (1/r_big) *  eta[:, r-1].reshape(m, 1, 1, p)* eta[:, l-1].reshape(1, m, p, 1)    
     )
 
@@ -56,7 +56,7 @@ def make_D_mat_loopy(eta, zeta):
                 # first sum
                 for r in range(1, p+1):
                     for l in range(1, p+1):
-                        D_mat = D_mat.at[j1, j2, j3].add( -1/(l*(l+r))*(
+                        D_mat = D_mat.at[j1, j2, j3].add( -1/(r*(l+r))*(
                             take(zeta, j2, l)*(take(zeta, j3, l+r)*take(eta, j1, r) - take(zeta, j3, r)*take(eta, j1, l+r)) +
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l+r) + take(eta, j1, r)*take(eta, j3, l+r))
                         ))
@@ -95,7 +95,7 @@ def make_D_mat(eta, zeta):
     l = jnp.arange(1, p+1).reshape(p, 1)
     r = jnp.arange(1, p+1).reshape(1, p)
     
-    summands_sum = 1/(l*(l+r))*(
+    summands_sum = 1/(r*(l+r))*(
         zeta.reshape(1, m, 1, p, 1)*(
             take(zeta, l+r).reshape(1, 1, m, p, p) * eta.reshape(m, 1, 1, 1, p) 
             - zeta.reshape(1, 1, m, 1, p) * take(eta, l+r).reshape(m, 1, 1, p, p)
@@ -309,18 +309,18 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         
         dWW_scaled = vectorized_fill_diagonal(dWW_nodiag_scaled , dWW_diag_scaled)
         
+        m = noise_terms
         J_tww = (
-            (1.0 / 6.0) * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:] 
-            - (1.0 / jnp.pi) * xi[:,jnp.newaxis,:] * b_vec[:,:,jnp.newaxis] 
-            + B_mat 
-            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,:,jnp.newaxis]
-            + (0.5 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:]
+            (1.0 / 6.0) * xi.reshape(steps, m, 1) * xi.reshape(steps, 1, m) 
+            - (1.0 / jnp.pi) * xi.reshape(steps, 1, m) * b_vec.reshape(steps, m, 1) 
+            + B_mat # .T?
+            - 0.25 * a_vec.reshape(steps, 1, m) * xi.reshape(steps, m, 1)
+            + (0.5 / jnp.pi) * xi.reshape(steps, m, 1) * b_vec.reshape(steps, 1, m)
             + C_mat
             + 0.5 * A_mat
         )
         
         J_tw = 1/2 * (xi - a_vec)
-        m = noise_terms
         J_wtw = (
             1/6 * xi.reshape(steps, m, 1) * xi.reshape(steps, 1, m)
             + 1/2 * a_vec.reshape(steps, m, 1) * J_tw.reshape(steps, 1, m)
@@ -345,11 +345,10 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             + D_mat
         )
         
-        
-        dWWW_scaled = J_mat - 0.5*(
-            jnp.eye(noise_terms)[jnp.newaxis,:,:,jnp.newaxis]*dTW_scaled[:,0,jnp.newaxis,jnp.newaxis,:] 
-            + jnp.eye(noise_terms)[jnp.newaxis,jnp.newaxis,:,:]*dTW_scaled[:,0,:,jnp.newaxis,jnp.newaxis]
-            )
+        dWWW_scaled = J_mat - 0.5 * (
+            jnp.eye(m).reshape(1, m, m, 1) * dTW_scaled.reshape(steps, 1, 1, m) +
+            jnp.eye(m).reshape(1, 1, m, m) * dWT_scaled.reshape(steps, m, 1, 1)
+        )
         
         return {
                 'd_w': dW_scaled,
