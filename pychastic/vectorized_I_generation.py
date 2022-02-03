@@ -27,8 +27,8 @@ def make_C_mat(eta, zeta):
     r_big = l.reshape(1, 1, 1, p)
 
     summands = (l != r) * r/(r**2-l**2+jnp.eye(p)) * (
-        (1/l_big) *    zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, r-1].reshape(1, m, p, 1) - 
-        (l_big/r_big) * eta[:, r-1].reshape(m, 1, 1, p)* eta[:, r-1].reshape(1, m, p, 1)    
+        (1/l_big) * zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, l-1].reshape(1, m, p, 1) - 
+        (1/r_big) *  eta[:, r-1].reshape(m, 1, 1, p)* eta[:, l-1].reshape(1, m, p, 1)    
     )
 
     C_mat = -1/(2*jnp.pi**2)*summands.sum(axis=(-2, -1))
@@ -317,17 +317,33 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             + (0.5 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:]
             + C_mat
             + 0.5 * A_mat
-            )
+        )
         
+        J_tw = 1/2 * (xi - a_vec)
+        m = noise_terms
+        J_wtw = (
+            1/6 * xi.reshape(steps, m, 1) * xi.reshape(steps, 1, m)
+            + 1/2 * a_vec.reshape(steps, m, 1) * J_tw.reshape(steps, 1, m)
+            + 1/(2*jnp.pi) * xi.reshape(steps, 1, m) * b_vec.reshape(steps, m, 1)
+            - B_mat
+            - 1/4 * a_vec.reshape(steps, 1, m) * xi.reshape(steps, m, 1)
+            + 1/(2*jnp.pi) * xi.reshape(steps, m, 1) * b_vec.reshape(steps, 1, m)
+        )
         
+        J_ww = (
+                0.5 * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:]
+                - 0.5 * (
+                      xi[:,:,jnp.newaxis] * a_vec[:,jnp.newaxis,:]
+                    - xi[:,jnp.newaxis,:] * a_vec[:,:,jnp.newaxis])
+                + A_mat)
         J_mat = (
-            xi[:,:,jnp.newaxis,jnp.newaxis] * J_tww[:,jnp.newaxis,:,:]
-            + 0.5 * a_vec[:,:,jnp.newaxis,jnp.newaxis] * dWW_scaled[:,jnp.newaxis,:,:]
-            + (0.5 / jnp.pi) * b_vec[:,:,jnp.newaxis,jnp.newaxis] * xi[:,jnp.newaxis,:,jnp.newaxis] * xi[:,jnp.newaxis,jnp.newaxis,:]
-            - xi[:,jnp.newaxis,:,jnp.newaxis] * B_mat[:,:,jnp.newaxis,:]
-            + xi[:,jnp.newaxis,jnp.newaxis,:] * (0.5 * A_mat[:,:,:,jnp.newaxis] - jnp.transpose(C_mat, axes = (0,2,1))[:,:,:,jnp.newaxis])
+            xi.reshape(steps, m, 1, 1) * J_tww.reshape(steps, 1, m, m)
+            + 0.5 * a_vec.reshape(steps, m, 1, 1) * J_ww.reshape(steps, 1, m, m)
+            + (0.5 / jnp.pi) * b_vec.reshape(steps, m, 1, 1) * xi.reshape(steps, 1, m, 1) * xi.reshape(steps, 1, 1, m)
+            - xi.reshape(steps, 1, m, 1) * B_mat.reshape(steps, m, 1, m)
+            + xi.reshape(steps, 1, 1, m) * (0.5 * A_mat.reshape(steps, m, m, 1) - jnp.transpose(C_mat, axes = (0,2,1)).reshape(steps, m, m, 1))
             + D_mat
-            )
+        )
         
         
         dWWW_scaled = J_mat - 0.5*(
