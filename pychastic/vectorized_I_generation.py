@@ -273,8 +273,8 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         alpha = (jnp.pi**2 / 180.0) - (0.5 / jnp.pi**2) * (rec**4).sum()
         
         a_vec = (- jnp.sqrt(2)/jnp.pi* jnp.sum( rec[:,:,jnp.newaxis]*zeta , axis = 1) - 2*jnp.sqrt(rho)*mu )
-        b_vec = (1 / jnp.sqrt(2) ) *  jnp.sum( (rec[:,:,jnp.newaxis]**2) * eta  , axis = 1) + jnp.sqrt(alpha)*phi
-        
+        b_vec = 1 / ( jnp.sqrt(2)*jnp.pi ) *  jnp.sum( (rec[:,:,jnp.newaxis]**2) * eta  , axis = 1) + jnp.sqrt(alpha)*phi
+
         A_mat = (0.5 / jnp.pi)*jnp.sum(
             rec[:,:,jnp.newaxis,jnp.newaxis] * (
                 zeta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
@@ -282,12 +282,14 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 ) ,
             axis=1
         )
+        
         B_mat = (1.0 / (4.0 * jnp.pi**2)) * jnp.sum( (rec[:,:,jnp.newaxis,jnp.newaxis]**2) * (
                 zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:] 
                 + eta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
             ) , axis = 1)
+
         C_mat = vectorized_make_C_mat(eta.transpose((0, 2, 1)), zeta.transpose((0, 2, 1)))
-            
+
         D_mat = vectorized_make_D_mat(eta.transpose((0, 2, 1)), zeta.transpose((0, 2, 1)))
 
         dW_scaled = xi.squeeze()
