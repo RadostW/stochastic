@@ -309,15 +309,15 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         
         J_tww = (
             (1.0 / 6.0) * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:] 
-            - (1.0 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:] 
+            - (1.0 / jnp.pi) * xi[:,jnp.newaxis,:] * b_vec[:,:,jnp.newaxis] 
             + B_mat 
-            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,jnp.newaxis,:]
+            - 0.25 * a_vec[:,jnp.newaxis,:] * xi[:,:,jnp.newaxis]
             + (0.5 / jnp.pi) * xi[:,:,jnp.newaxis] * b_vec[:,jnp.newaxis,:]
             + C_mat
             + 0.5 * A_mat
             )
         
-        #J_mat = NotImplementedError # check Kloeden-Platen (5.8.11)
+        
         J_mat = (
             xi[:,:,jnp.newaxis,jnp.newaxis] * J_tww[:,jnp.newaxis,:,:]
             + 0.5 * a_vec[:,:,jnp.newaxis,jnp.newaxis] * dWW_scaled[:,jnp.newaxis,:,:]
