@@ -86,8 +86,12 @@ def make_D_mat(eta, zeta):
     m, p = jnp.shape(eta)
 
     def take(tensor, idx, fill = 0):
-        illegal = jnp.logical_or(idx > p,idx < 1)
-        return tensor[..., idx-1].at[..., illegal].set(fill)
+        # Non jit-friendly implementation
+        # illegal = jnp.logical_or(idx > p,idx < 1)
+        # return tensor[..., idx-1].at[..., illegal].set(fill)
+        legalized_idx = jnp.clip(idx,a_min = 1,a_max = p)
+        illegal_mask = jnp.logical_or(idx > p,idx < 1)
+        return tensor[...,idx-1]*(1 - 1*illegal_mask) + illegal_mask*fill
 
     # first term
     # summands shape: (m, m, m, p, p)
