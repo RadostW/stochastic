@@ -89,7 +89,7 @@ class SDESolver:
             Number of sample paths to generate
         step_post_processing : callable
             (Advanced) Function of with call signature f(x) returning canonical coordinates of x.
-            Usefull when simulating process on a manifold with doesn not have covering map from :math:`\\mathbb{R}^n` such as :math:`SO(3)`.
+            Usefull when simulating process on a manifold with does not have covering map from :math:`\\mathbb{R}^n` such as :math:`SO(3)`.
             Post processing function has to `jit` with jax. To deal with branch cuts and such refer to `jax.lax.cond`.
         seed : int, optional
             value of seed for PRNG.
