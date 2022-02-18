@@ -21,6 +21,27 @@ def tensordot1(a, b):
 
 def tensordot2(a, b):
     return jax.numpy.tensordot(a, b, axes=2)
+    
+    
+# Taylor-Ito expansion operators    
+def L_t_operator(f,problem):
+    @wraps(f)
+    def wrapped(x):
+        b_val = problem.b(x)
+        val = tensordot1(jax.jacobian(f)(x), problem.a(x)) + 0.5 * tensordot2(
+            jax.hessian(f)(x), tensordot1(b_val, b_val.T)
+        )
+        return val[:,jnp.newaxis,...] #indexing convention [spatial, time, ... = noiseterms/time]
+
+    return wrapped
+
+def L_w_operator(f,problem):
+    @wraps(f)
+    def wrapped(x):
+        val =  tensordot1(jax.jacobian(f)(x), problem.b(x))[:,jnp.newaxis,...]
+        return jnp.swapaxes(val,1,-1)[:,...,0] # indexing convention [spatial, noiseterms, ... = noiseterms/time]
+
+    return wrapped
 
 
 class SDESolver:
@@ -56,7 +77,7 @@ class SDESolver:
         self.target_mse_density = target_mse_density
         self.adaptive = adaptive
 
-    def solve_many(self, problem: SDEProblem, n_trajectories=1, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
+    def solve_many(self, problem: SDEProblem, n_trajectories=1, step_post_processing = None, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
         """
         Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``SDESolver`` object.
 
@@ -64,6 +85,12 @@ class SDESolver:
         ----------
         problem : SDEProblem
             (Vector) SDE problem to be solved.
+        n_trajectories : int, optional
+            Number of sample paths to generate
+        step_post_processing : callable
+            (Advanced) Function of with call signature f(x) returning canonical coordinates of x.
+            Usefull when simulating process on a manifold with doesn not have covering map from :math:`\\mathbb{R}^n` such as :math:`SO(3)`.
+            Post processing function has to `jit` with jax. To deal with branch cuts and such refer to `jax.lax.cond`.
         seed : int, optional
             value of seed for PRNG.
         chunk_size: int or None, optional
@@ -102,6 +129,7 @@ class SDESolver:
         ... tmax=0.02
         ... )
         >>> solution = solver.solve_many(problem,n_trajectories = 100)
+        >>> solution_principal = solver.solve_many(problem,step_post_processing = lambda x : jnp.fmod(x,2*jnp.pi),n_trajectories = 100)
         >>> (r,phi) = (solution["solution_values"][:,-1,:]).transpose()
         >>> compare = {"integrated":(r*jnp.array([jnp.cos(phi),jnp.sin(phi)])).T,"exact":solution["wiener_values"][:,-1,:]+problem.x0}
         >>> print(compare["integrated"][0],compare["exact"][0])
@@ -114,23 +142,10 @@ class SDESolver:
         dimension, noise_terms = problem.b(problem.x0).shape
 
         def L_t(f):
-            @wraps(f)
-            def wrapped(x):
-                b_val = problem.b(x)
-                val = tensordot1(jax.jacobian(f)(x), problem.a(x)) + 0.5 * tensordot2(
-                    jax.hessian(f)(x), tensordot1(b_val, b_val.T)
-                )
-                val = jax.numpy.expand_dims(val, -1)
-                return val
-
-            return wrapped
+            return L_t_operator(f,problem)
 
         def L_w(f):
-            @wraps(f)
-            def wrapped(x):
-                return tensordot1(jax.jacobian(f)(x), problem.b(x))
-
-            return wrapped
+            return L_w_operator(f,problem)
 
         def L(f, idx):
             for x in reversed(idx):
@@ -193,6 +208,9 @@ class SDESolver:
         chunks_per_randomization = chunks_per_randomization or number_of_chunks
 
         key = jax.random.PRNGKey(seed)
+        
+        if step_post_processing is not None:
+            v_step_post_processing = jax.vmap(step_post_processing)
 
         def scan_func(carry, input_):
             t, x, w = carry
@@ -211,6 +229,10 @@ class SDESolver:
 
             t += self.dt
             x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
+            
+            if step_post_processing is not None:
+                x = v_step_post_processing(x)
+            
             w += wiener_integrals_rescaled['d_w']
             return (t, x, w), (t, x, w)
 

@@ -4,22 +4,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 problem = pychastic.sde_problem.SDEProblem(
-    a=lambda x: -x*(1-x)*(1+x),
-    b=lambda x: (1-x)*(1+x),
-    x0=jnp.array(15.0/16.0),
-    tmax=1.0/4.0,
+    a=lambda x: 0.5*x+(x**2+1.0)**0.5,
+    b=lambda x: (x**2+1.0)**0.5,
+    x0=jnp.array(0.0),
+    tmax=1.0,
 )
 
 solver = pychastic.sde_solver.SDESolver()
 solver.scheme = 'milstein'
 
+import sys
+if len(sys.argv) == 2:
+    solver.scheme = sys.argv[1]
+
 print(f'SOLVER SCHEME {solver.scheme}')
 
-dts = [2**(-x) for x in range(3,10,1)]
-n_samples = 2**20
+dts = [2**(-x) for x in range(1,10,1)]
+n_samples = 2**15
 
-theoretical_mean = 0.905450297089824
-theoretical_variance = 0.01000973989252807
+theoretical_mean = 1.937579205326131
+theoretical_variance = 9.64532433084641
 theoretical_sigma = np.sqrt(theoretical_variance / n_samples)
 
 bias_dict = dict()

@@ -8,10 +8,10 @@ from functools import wraps
 # Such design is chosen because they depend on problem.a and problem.b
 
 problem = pychastic.sde_problem.SDEProblem(
-a = lambda x : jnp.exp(3.*x),
-b = lambda x : jnp.exp(7.*x),
+a = lambda x : jnp.array([1.1*jnp.exp(3.*x[0]),1.2*jnp.exp(5.*x[1])]),
+b = lambda x : jnp.array([[1.3*jnp.exp(7.*x[0]),1.4*jnp.exp(11.*x[1])],[1.5*jnp.exp(13.*x[1]),1.6*jnp.exp(17.*x[0])]]),
 tmax = 1.0,
-x0 = jnp.array(0.)
+x0 = jnp.array([0.,0.])
 )
 
 from pychastic.sde_solver import tensordot1
@@ -44,7 +44,7 @@ def L(f, idx):
     
 def test_L_operator_logic():
     f = lambda x : x
-    x0 = jnp.array([0.0])
+    x0 = problem.x0
 
     f_t = L(f,"t")(x0).squeeze() # should be a
     f_w = L(f,"w")(x0).squeeze() # should be b
