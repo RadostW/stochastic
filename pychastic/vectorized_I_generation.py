@@ -27,8 +27,8 @@ def make_C_mat(eta, zeta):
     r_big = l.reshape(1, 1, 1, p)
 
     summands = (l != r) * r/(r**2-l**2+jnp.eye(p)) * (
-        (1/l_big) * zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, l-1].reshape(1, m, p, 1) + 
-        (1/r_big) *  eta[:, r-1].reshape(m, 1, 1, p)* eta[:, l-1].reshape(1, m, p, 1)    
+        (1/l_big) * zeta[:, r-1].reshape(m, 1, 1, p)*zeta[:, l-1].reshape(1, m, p, 1) +
+        (1/r_big) *  eta[:, r-1].reshape(m, 1, 1, p)* eta[:, l-1].reshape(1, m, p, 1)
     )
 
     C_mat = -1/(2*jnp.pi**2)*summands.sum(axis=(-2, -1))
@@ -68,7 +68,7 @@ def make_D_mat_loopy(eta, zeta):
                             take(zeta, j2, l)*(take(zeta, j1, r)*take(eta, j3, l-r) + take(zeta, j3, l-r)*take(eta, j1, r)) -
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, l-r) - take(eta, j1, r)*take(eta, j3, l-r))
                         ))
-                
+
                 # third sum
                 for l in range(1, p+1):
                     for r in range(l+1, 2*p+1):
@@ -76,7 +76,7 @@ def make_D_mat_loopy(eta, zeta):
                             take(zeta, j2, l)*(take(zeta, j3, r-l)*take(eta, j1, r) - take(zeta, j1, r)*take(eta, j3, r-l)) +
                             take(eta, j2, l)*(take(zeta, j1, r)*take(zeta, j3, r-l) + take(eta, j1, r)*take(eta, j3, r-l))
                         ))
-    
+
     D_mat *= 1/(jnp.pi**2*2**(5/2))
     return D_mat
 
@@ -91,21 +91,21 @@ def make_D_mat(eta, zeta):
         # return tensor[..., idx-1].at[..., illegal].set(fill)
         legalized_idx = jnp.clip(idx,a_min = 1,a_max = p)
         illegal_mask = jnp.logical_or(idx > p,idx < 1)
-        return tensor[...,idx-1]*(1 - 1*illegal_mask) + illegal_mask*fill
+        return tensor[...,legalized_idx-1]*(1 - 1*illegal_mask) + illegal_mask*fill
 
     # first term
     # summands shape: (m, m, m, p, p)
-    
+
     l = jnp.arange(1, p+1).reshape(p, 1)
     r = jnp.arange(1, p+1).reshape(1, p)
-    
+
     summands_sum = 1/(r*(l+r))*(
         zeta.reshape(1, m, 1, p, 1)*(
-            take(zeta, l+r).reshape(1, 1, m, p, p) * eta.reshape(m, 1, 1, 1, p) 
+            take(zeta, l+r).reshape(1, 1, m, p, p) * eta.reshape(m, 1, 1, 1, p)
             - zeta.reshape(1, 1, m, 1, p) * take(eta, l+r).reshape(m, 1, 1, p, p)
-        ) 
+        )
         + eta.reshape(1, m, 1, p, 1)*(
-            zeta.reshape(m, 1, 1, 1, p) * take(zeta, l+r).reshape(1, 1, m, p, p) 
+            zeta.reshape(m, 1, 1, 1, p) * take(zeta, l+r).reshape(1, 1, m, p, p)
             + eta.reshape(m, 1, 1, 1, p) * take(eta, l+r).reshape(1, 1, m, p, p)
         )
     )
@@ -113,7 +113,7 @@ def make_D_mat(eta, zeta):
 
     # second term
     # summands shape: (m, m, m, p, 2p)
-    
+
     l = jnp.arange(1, p+1).reshape(p, 1)
     r = jnp.arange(1, 2*p+1).reshape(1, 2*p) # note rectangular sum
 
@@ -124,7 +124,7 @@ def make_D_mat(eta, zeta):
             take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, l-r).reshape(1, 1, m, p, 2*p)
             + take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, l-r).reshape(1, 1, m, p, 2*p) 
 
-        ) 
+        )
         - eta.reshape(1, m, 1, p, 1)*(
             take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, l-r).reshape(1, 1, m, p, 2*p) 
             - take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, l-r).reshape(1, 1, m, p, 2*p)
@@ -143,7 +143,7 @@ def make_D_mat(eta, zeta):
             take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, r-l).reshape(1, 1, m, p, 2*p)
             - take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, r-l).reshape(1, 1, m, p, 2*p) 
 
-        ) 
+        )
         + eta.reshape(1, m, 1, p, 1)*(
             take(zeta,r).reshape(m, 1, 1, 1, 2*p) * take(zeta, r-l).reshape(1, 1, m, p, 2*p) 
             + take(eta,r).reshape(m, 1, 1, 1, 2*p) * take(eta, r-l).reshape(1, 1, m, p, 2*p)
@@ -151,11 +151,11 @@ def make_D_mat(eta, zeta):
     )
     D_mat_diff_upper = summands_diff_upper.sum(axis=(-2, -1))
 
-    
+
     D_mat = 1/(jnp.pi**2*2**(5/2)) * (-D_mat_sum + D_mat_diff_lower + D_mat_diff_upper)
     return D_mat
 
-vectorized_make_D_mat = jax.vmap(make_D_mat)             
+vectorized_make_D_mat = jax.vmap(make_D_mat)
 
 # Compare Kloden-Platen (10.3.7), dimension = d, noiseterms = m
 # Generate 'steps' stochastic integral increments at once
@@ -188,7 +188,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             return {
                 'd_w' : dW_scaled
             }
-                
+
         if scheme == 'milstein':
             dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
             dI_scaled = 0.5*(dW_scaled**2 - 1)[..., jax.numpy.newaxis] # noise_terms == 1 is special
@@ -196,8 +196,8 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             return {
                 'd_w' : dW_scaled,
                 'd_ww' : dI_scaled
-            }    
-            
+            }
+
         if scheme == 'wagner_platen':
             u = jax.random.normal(key, shape=(2, steps, noise_terms))
             dW_scaled = u[0]
@@ -212,7 +212,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 'd_tw': dW_scaled[..., jax.numpy.newaxis] - dZ_scaled,
                 'd_www': (0.5*((1.0/3.0)*dW_scaled**2-1)*dW_scaled)[..., jax.numpy.newaxis, jax.numpy.newaxis],
             }
-        
+
     # Below multidim implementations
     if scheme == 'euler':
         dW_scaled = jax.random.normal(key, shape=(steps, noise_terms))
@@ -260,22 +260,21 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 'd_ww': dI_scaled
             }
     elif scheme == 'wagner_platen':
-        #raise NotImplementedError # WIP
-        
+
         key1, key2, key3, key4, key5 = jax.random.split(key, num=5)
-        
+
         # Notation of Kloeden-Platen (10.4.7) and onwards
         xi = jax.random.normal(key1, shape=(steps, noise_terms))
         zeta = jax.random.normal(key2, shape=(steps, p, noise_terms))
         eta = jax.random.normal(key3, shape=(steps, p, noise_terms))
         mu = jax.random.normal(key4, shape=(steps, noise_terms))
         phi = jax.random.normal(key5, shape=(steps, noise_terms))
-        
+
         rec = 1.0/jnp.arange(1,p+1)[jnp.newaxis,:] # 1/r vector
-        
+
         rho = (1.0/ 12.0) - (rec ** 2).sum() / (2 * jax.numpy.pi ** 2)
         alpha = (jnp.pi**2 / 180.0) - (0.5 / jnp.pi**2) * (rec**4).sum()
-        
+
         a_vec = (- jnp.sqrt(2)/jnp.pi* jnp.sum( rec[:,:,jnp.newaxis]*zeta , axis = 1) - 2*jnp.sqrt(rho)*mu )
         b_vec = 1 / ( jnp.sqrt(2)*jnp.pi ) *  jnp.sum( (rec[:,:,jnp.newaxis]**2) * eta  , axis = 1) + jnp.sqrt(alpha)*phi
 
@@ -286,9 +285,9 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
                 ) ,
             axis=1
         )
-        
+
         B_mat = (1.0 / (4.0 * jnp.pi**2)) * jnp.sum( (rec[:,:,jnp.newaxis,jnp.newaxis]**2) * (
-                zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:] 
+                zeta[:,:,:,jnp.newaxis] * zeta[:,:,jnp.newaxis,:]
                 + eta[:,:,:,jnp.newaxis] * eta[:,:,jnp.newaxis,:]
             ) , axis = 1)
 
@@ -299,18 +298,18 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         dW_scaled = xi.squeeze()
         dWT_scaled = 0.5*(xi+a_vec)[:,:,jnp.newaxis] # time axes have dim=1
         dTW_scaled = dW_scaled[:,jnp.newaxis,:] - jnp.transpose(dWT_scaled, axes = (0,2,1))
-        
-        
+
+
         dWW_diag_scaled = 0.5*(dW_scaled**2-1.0) # only diagonal elements
-        
+
         dWW_nodiag_scaled = (
                 0.5 * xi[:,:,jnp.newaxis] * xi[:,jnp.newaxis,:]
                 - 0.5 * (
                       xi[:,:,jnp.newaxis] * a_vec[:,jnp.newaxis,:]
                     - xi[:,jnp.newaxis,:] * a_vec[:,:,jnp.newaxis])
                 + A_mat)
-                
-        
+
+
         dWW_scaled = vectorized_fill_diagonal(dWW_nodiag_scaled , dWW_diag_scaled)
         
         m = noise_terms
