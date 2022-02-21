@@ -209,8 +209,8 @@ class SDESolver:
 
         key = jax.random.PRNGKey(seed)
         
-        if step_post_processing is not None:
-            v_step_post_processing = jax.vmap(step_post_processing)
+        #if step_post_processing is not None:
+        #    v_step_post_processing = jax.vmap(step_post_processing)
 
         def scan_func(carry, input_):
             t, x, w = carry
@@ -231,7 +231,7 @@ class SDESolver:
             x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
             
             if step_post_processing is not None:
-                x = v_step_post_processing(x)
+                x = step_post_processing(x)
             
             w += wiener_integrals_rescaled['d_w']
             return (t, x, w), (t, x, w)
