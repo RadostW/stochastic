@@ -23,8 +23,6 @@ options.
 How to install
 ''''''''''''''
 
-(THIS SECTION REQUIRES UPDATING AFTER PUBLISHING)
-
 Easiest way to get the package from PyPi is using pip. Simply run:
 
 .. prompt:: bash $ auto
@@ -38,6 +36,7 @@ Next steps
 
 * :doc:`Tutorial - derivatives pricing  themed<optionpricing>`.
 * :doc:`Tutorial - molecular dynamics themed<moleculardynamics>`.
+* :doc:`Advanced features <advancedfeatures>`.
 * :doc:`Examples <examples>`.
 
 Search tools
