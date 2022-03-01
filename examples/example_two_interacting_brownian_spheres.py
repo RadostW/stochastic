@@ -1,3 +1,7 @@
+# Following code implements simuation of motion of
+# two hydrodynamically interacting brownian spheres conneced
+# with a harmonic spring
+
 import pychastic                   # solving sde
 import pygrpy.jax_grpy_tensors     # hydrodynamic interactions
 import jax.numpy as jnp            # jax array operations

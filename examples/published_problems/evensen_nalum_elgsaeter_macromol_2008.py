@@ -1,6 +1,9 @@
-# Following code is pychastic implementation of algorithm proposed by 
-# T. R. Evensen, S. N. Naess, A. Elgsaeter in
-# Macromol. Theory Simul. 2008, 17, 403–409
+# Following code is implementation of simulation published in:
+# "Brownian Dynamics Simulations of Rotational Diffusion Using
+# the Cartesian Components of the Rotation Vector as Generalized Coordinates"
+# T. R. Evensen, S. N. Naess & A. Elgsaeter
+# Macromol. Theory Simul. (2008)
+# doi:10.1002/mats.200800031
 
 import pychastic
 import jax.numpy as jnp

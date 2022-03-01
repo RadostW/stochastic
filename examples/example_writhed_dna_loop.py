@@ -1,3 +1,10 @@
+# Following code implements simualtion of writhed DNA molecule.
+# This simulation is inspired by the following publication:
+# "Structural diversity of supercoiled DNA"
+# R. Irobalieva et al.
+# Nature Communications (2015)
+# doi:10.1038/ncomms9440
+
 import pychastic                      # solving sde
 import pygrpy.jax_grpy_tensors        # hydrodynamic interactions
 import pywrithe                       # computing writhe of closed curve
@@ -8,8 +15,8 @@ import numpy as np                    # post processing trajectory
 import math as ma                     # math.pi
 from tqdm import tqdm                 # progess bar
 
-from jax.config import config         # extra debug
-config.update("jax_debug_nans",True)  # throw on nans
+# from jax.config import config         # extra debug
+# config.update("jax_debug_nans",True)  # throw on nans
 
 
 '''
