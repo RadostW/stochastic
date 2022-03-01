@@ -51,7 +51,7 @@ class SDESolver:
 
     Parameters
     ----------
-    scheme : {'euler', 'commutative_milstein', 'milstein'}, default: 'euler'
+    scheme : {'euler', 'milstein', 'wagner_platen'}, default: 'euler'
          Type of scheme used for integration.
     dt : float
          Step size in fixed-step integration.
