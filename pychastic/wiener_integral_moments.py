@@ -8,7 +8,7 @@ def E(alpha) -> poly:
     Calculate expected value of mixed winer integral E(I_alpha).
     Entries in multindex alpha coresspond to:
 
-    * 0 - time dimension    
+    * 0 - time dimension
     * positive integer - wiener dimension
 
     Parameters
@@ -19,11 +19,11 @@ def E(alpha) -> poly:
     -------
     numpy.polynomial.Polynomial
         polynomial in time
-        
+
     Example
     -------
     Compute expected value of integral of Wiener process with respect to itself.
-    
+
     >>> import pychastic.wiener_integral_moments
     >>> pychastic.wiener_integral_moments.E([1,1]) # returns 0
 
@@ -39,8 +39,8 @@ def E2(alpha, beta=None) -> poly:
     Calculate expected value of a product of two mixed winer integrals E(I_alpha*I_beta) or
     E(I_alpha^2) if beta=None.
     Entries in multindices alpha and beta coresspond to:
-    
-    * 0 - time dimension    
+
+    * 0 - time dimension
     * positive integer - wiener dimension
 
     Parameters
