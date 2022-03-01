@@ -421,14 +421,14 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         )
 
         J_tw = 1 / 2 * (xi - a_vec)
-        J_wtw = (
-            1 / 6 * xi.reshape(steps, m, 1) * xi.reshape(steps, 1, m)
-            + 1 / 2 * a_vec.reshape(steps, m, 1) * J_tw.reshape(steps, 1, m)
-            + 1 / (2 * jnp.pi) * xi.reshape(steps, 1, m) * b_vec.reshape(steps, m, 1)
-            - B_mat
-            - 1 / 4 * a_vec.reshape(steps, 1, m) * xi.reshape(steps, m, 1)
-            + 1 / (2 * jnp.pi) * xi.reshape(steps, m, 1) * b_vec.reshape(steps, 1, m)
-        )
+        # J_wtw = (
+        #     1 / 6 * xi.reshape(steps, m, 1) * xi.reshape(steps, 1, m)
+        #     + 1 / 2 * a_vec.reshape(steps, m, 1) * J_tw.reshape(steps, 1, m)
+        #     + 1 / (2 * jnp.pi) * xi.reshape(steps, 1, m) * b_vec.reshape(steps, m, 1)
+        #     - B_mat
+        #     - 1 / 4 * a_vec.reshape(steps, 1, m) * xi.reshape(steps, m, 1)
+        #     + 1 / (2 * jnp.pi) * xi.reshape(steps, m, 1) * b_vec.reshape(steps, 1, m)
+        # )
 
         J_ww = (
             0.5 * xi[:, :, jnp.newaxis] * xi[:, jnp.newaxis, :]
