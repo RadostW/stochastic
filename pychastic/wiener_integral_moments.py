@@ -19,6 +19,13 @@ def E(alpha) -> poly:
     -------
     numpy.polynomial.Polynomial
         polynomial in time
+        
+    Example
+    -------
+    Compute expected value of integral of Wiener process with respect to itself.
+    
+    >>> import pychastic.wiener_integral_moments
+    >>> pychastic.wiener_integral_moments.E([1,1]) # returns 0
 
     """
     if any(a != 0 for a in alpha):
@@ -47,6 +54,14 @@ def E2(alpha, beta=None) -> poly:
     -------
     numpy.polynomial.Polynomial
         polynomial in time
+
+    Example
+    -------
+    Compute variance of integral of Wiener process with respect to itself on interval [0,1].
+    >>> import pychastic.wiener_integral_moments
+    >>> mean = pychastic.wiener_integral_moments.E([1,1])(1)
+    >>> mean_square = pychastic.wiener_integral_moments.E2([1,1])(1)
+    >>> print(f'Variance is {mean_square - mean**2}') # prints 0.5
 
     """
     beta = alpha if beta is None else beta
