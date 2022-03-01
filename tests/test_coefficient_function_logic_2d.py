@@ -1,7 +1,5 @@
-import jax
 import jax.numpy as jnp
 import pychastic.sde_problem
-from functools import wraps
 
 # Check logic inside sde_solver
 # Code is copied because L_t L_w and L are local variables and are hard to test
@@ -18,9 +16,6 @@ problem = pychastic.sde_problem.SDEProblem(
     tmax=1.0,
     x0=jnp.array([0.0, 0.0]),
 )
-
-from pychastic.sde_solver import tensordot1
-from pychastic.sde_solver import tensordot2
 
 from pychastic.sde_solver import L_t_operator
 from pychastic.sde_solver import L_w_operator
@@ -57,7 +52,7 @@ def test_L_operator_logic():
     f_t = L(f, "t")(x0).squeeze()  # should be a
     f_w = L(f, "w")(x0).squeeze()  # should be b
     f_ww = L(f, "ww")(x0).squeeze()  # should be b*b'
-    f_tw = L(f, "tw")(x0).squeeze()  # should be a*b' + 0.5*b*b''
+    # f_tw = L(f, "tw")(x0).squeeze()  # should be a*b' + 0.5*b*b''
     f_wt = L(f, "wt")(x0).squeeze()  # should be b*a'
 
     a = jnp.array([1.1, 1.2])
