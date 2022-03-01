@@ -52,10 +52,25 @@ def test_L_operator_logic():
     f_tw = L(f,"tw")(x0).squeeze() # should be a*b' + 0.5*b*b''
     f_wt = L(f,"wt")(x0).squeeze() # should be b*a'
     
-    sample_coefficients = jnp.array([f_t,f_w,f_ww,f_tw,f_wt])
-    target_coefficients = jnp.array([1.,1.,7.,7.+0.5*7.*7.,3.])
+    a = jnp.array([1.1,1.2])
+    b = jnp.array([[1.3,1.4],[1.5,1.6]])
+    bp = jnp.array([
+    [[1.3*7,0],[0,1.6*17]],
+    [[0,1.4*11],[1.5*13,0]]
+    ])
     
-    assert jnp.allclose(sample_coefficients,target_coefficients)
+    ap = jnp.array([
+    [1.1*3,0],
+    [0,1.2*5]
+    ])
+         
+    assert jnp.allclose(f_t,a)
+    assert jnp.allclose(f_w,b)
+    assert jnp.allclose(f_ww, jnp.einsum('ai,abj->bij',b,bp) )
+    assert jnp.allclose(f_wt, jnp.einsum('cj,cd->dj',b,ap) )
+    #assert jnp.allclose(f_wt, jnp.einsum('a,abj->bj',a,bp) + jnp.einsum('a,abj->bj',sigma,bpp) )
+    
+    
         
 if __name__ == "__main__":
     test_L_operator_logic()        
