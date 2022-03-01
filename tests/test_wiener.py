@@ -266,13 +266,13 @@ def test_integral_generation_wagner_platen():
         ]
     )
 
-    samples_exponent = 14
+    samples_exponent = 12
     z_score_cutoff = 5
 
     seed = 0
     key = jax.random.PRNGKey(seed)
     sample_integrals = pychastic.vectorized_I_generation.get_wiener_integrals(
-        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2
+        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2, p = 50
     )
 
     sample_integrals = jnp.array(
