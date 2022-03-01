@@ -37,7 +37,7 @@ def test_again_exact_solution_scalar(solver: SDESolver, problem, steps, quantile
     solver.dt = problem.tmax / steps
 
     result = solver.solve(problem)
-    # time_values = result['time_values'].reshape(-1, 1)
+    time_values = result['time_values'].reshape(-1, 1)
     solution_values = result["solution_values"]
     wiener_values = result["wiener_values"]
 
@@ -101,7 +101,7 @@ def test_again_exact_solution_vector(solver: SDESolver, problem, steps, quantile
     solver.dt = problem.tmax / steps
 
     result = solver.solve(problem, seed=1)
-    time_values = result["time_values"].reshape(-1, 1)
+    # time_values = result["time_values"].reshape(-1, 1)
     solution_values = result["solution_values"]
     wiener_values = result["wiener_values"]
 
