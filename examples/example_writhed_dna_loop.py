@@ -1,3 +1,10 @@
+# Following code implements simualtion of writhed DNA molecule.
+# This simulation is inspired by the following publication:
+# "Structural diversity of supercoiled DNA"
+# R. Irobalieva et al.
+# Nature Communications (2015)
+# doi:10.1038/ncomms9440
+
 import pychastic                      # solving sde
 import pygrpy.jax_grpy_tensors        # hydrodynamic interactions
 import pywrithe                       # computing writhe of closed curve
@@ -8,8 +15,8 @@ import numpy as np                    # post processing trajectory
 import math as ma                     # math.pi
 from tqdm import tqdm                 # progess bar
 
-from jax.config import config         # extra debug
-config.update("jax_debug_nans",True)  # throw on nans
+# from jax.config import config         # extra debug
+# config.update("jax_debug_nans",True)  # throw on nans
 
 
 '''
@@ -66,41 +73,27 @@ def noise(x):
      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
      return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
 
-problem = pychastic.sde_problem.VectorSDEProblem(
+problem = pychastic.sde_problem.SDEProblem(
       drift,
       noise,
       x0 = (beam_length / (2.0*ma.pi))*jnp.reshape(jnp.array([
                         [ma.cos(2.0*ma.pi*x/n_beads),ma.sin(2.0*ma.pi*x/n_beads),0.0] for x in range(n_beads)
-                      ]),(3*n_beads,)), 
-      dimension = 3*n_beads,
-      noiseterms = 3*n_beads,
+                      ]),(3*n_beads,)),
+      # dimension = 3*n_beads,
+      # noiseterms = 3*n_beads,
       tmax = 6000.0*10.0**(-6.0))
 
-solver = pychastic.sde_solver.VectorSDESolver(dt = 0.1*10.0**(-6.0))
+solver = pychastic.sde_solver.SDESolver(dt = 0.1*10.0**(-6.0))
 trajectories = np.array([solver.solve(problem) for x in tqdm(range(1))])
-
 
 #
 # plotting
 #
 
-#trajectory = trajectories[0]
-#plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
-#plt.plot(trajectory['time_values'],trajectory['solution_values'][:,3])
-
 trajectory = trajectories[0]
 plt.plot(trajectory['solution_values'][:,0],trajectory['solution_values'][:,1])
 plt.plot(trajectory['solution_values'][:,9],trajectory['solution_values'][:,10])
 np.savetxt('data_loop.csv', trajectory['solution_values'], delimiter=',')
-
-#sol =  np.array([x['solution_values'] for x in trajectories]);
-#plt.plot(trajectories[0]['time_values'],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,0:3]-sol[:,0,np.newaxis,0:3])**2,axis=2),axis=0),label='First, big bead') # big bead
-#plt.plot(trajectories[0]['time_values'],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,9:12]-sol[:,0,np.newaxis,9:12])**2,axis=2),axis=0),label='Last, small bead') # small bead
-#plt.plot([0.0,problem.tmax],[0.0,0.3333*(1.0/ma.pi)*problem.tmax]) # largest bead -- theory
-#plt.plot([0.0,problem.tmax],[0.0,0.2898*(1.0/ma.pi)*problem.tmax]) # BD sim Cichocki et al -- theory
-#plt.xlabel(r"Dimensionless time ($t/\tau$)")
-#plt.ylabel(r"Mean square displacement ($\mathbb{E}|q|^2$)")
-#plt.legend()
 
 plt.show()
 

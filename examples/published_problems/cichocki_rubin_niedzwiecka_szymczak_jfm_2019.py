@@ -1,3 +1,9 @@
+# Following code is implementation of simulation published in:
+# "Diffusion coefficients of elastic macromolecules"
+# B. Cichocki, M. Rubin, A. Niedzwiecka & P. Szymczak
+# J. Fluid Mech. (2019)
+# doi:10.1017/jfm.2019.652
+
 import pychastic                   # solving sde
 import pygrpy.jax_grpy_tensors     # hydrodynamic interactions
 import jax.numpy as jnp            # jax array operations
@@ -54,15 +60,6 @@ trajectories = np.array([solver.solve(problem) for x in tqdm(range(2))])
 #
 # plotting
 #
-
-#trajectory = trajectories[0]
-#plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
-#plt.plot(trajectory['time_values'],trajectory['solution_values'][:,3])
-
-#trajectory = trajectories[0]
-#plt.plot(trajectory['solution_values'][:,0],trajectory['solution_values'][:,1])
-#plt.plot(trajectory['solution_values'][:,9],trajectory['solution_values'][:,10])
-#np.savetxt('data.csv', trajectory['solution_values'], delimiter=',')
 
 sol =  np.array([x['solution_values'] for x in trajectories]);
 plt.plot(trajectories[0]['time_values'],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,0:3]-sol[:,0,np.newaxis,0:3])**2,axis=2),axis=0),label='First, big bead') # big bead

@@ -36,6 +36,7 @@ Next steps
 
 * :doc:`Tutorial - derivatives pricing  themed<optionpricing>`.
 * :doc:`Tutorial - molecular dynamics themed<moleculardynamics>`.
+* :doc:`Advanced features <advancedfeatures>`.
 * :doc:`Examples <examples>`.
 
 Search tools
