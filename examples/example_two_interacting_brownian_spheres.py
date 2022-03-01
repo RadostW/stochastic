@@ -21,17 +21,17 @@ def noise(x):
      mu = pygrpy.jax_grpy_tensors.muTT(locations,radii)
      return jnp.sqrt(2)*jnp.linalg.cholesky(mu)
 
-problem = pychastic.sde_problem.VectorSDEProblem(
+problem = pychastic.sde_problem.SDEProblem(
       drift,
       noise,
       x0 = jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(6,)),
-      dimension = 6,
-      noiseterms = 6,
+      # dimension = 6,
+      # noiseterms = 6,
       tmax = 500.0)
-solver = pychastic.sde_solver.VectorSDESolver()
-solver.scheme='euler'
+solver = pychastic.sde_solver.SDESolver()
+
 trajectory = solver.solve(problem) # takes about 5 seconds
 
 plt.plot(trajectory['time_values'],trajectory['solution_values'][:,0])
 plt.plot(trajectory['time_values'],trajectory['solution_values'][:,3])
-#plt.show()
+plt.show()
