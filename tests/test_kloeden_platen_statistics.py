@@ -1,7 +1,6 @@
 import pychastic
 import numpy as np
-import jax
-import jax.numpy as jnp
+
 
 def test_kp_exercise_9_3_3():
     a = 1.5
@@ -39,13 +38,13 @@ def test_kp_exercise_9_3_3():
 
         error = np.fabs(np.array(exact_values) - np.array(last_values))
 
-        errors.append(error.reshape((n_rows,n_wieners_per_cell)))
+        errors.append(error.reshape((n_rows, n_wieners_per_cell)))
 
     errors = np.array(errors)
 
-    mean_error = np.mean(errors,axis=-1)
-    mean_mean_error = np.mean(mean_error,axis=-1)
-    std_mean_error = (2.0 / np.sqrt(n_rows))*np.std(mean_error,axis=-1)
+    mean_error = np.mean(errors, axis=-1)
+    mean_mean_error = np.mean(mean_error, axis=-1)
+    std_mean_error = (2.0 / np.sqrt(n_rows)) * np.std(mean_error, axis=-1)
 
     rtol = 0.15
     assert np.isclose(mean_mean_error[0], 0.280, rtol=rtol)
@@ -53,8 +52,8 @@ def test_kp_exercise_9_3_3():
     assert np.isclose(mean_mean_error[2], 0.076, rtol=rtol)
     assert np.isclose(mean_mean_error[3], 0.039, rtol=rtol)
 
-    for (dt, mu, sigma) in zip(dts,mean_mean_error,std_mean_error):
-        
+    for (dt, mu, sigma) in zip(dts, mean_mean_error, std_mean_error):
+
         print(f"{dt:8.3} : {mu:5.3f}+-{sigma:5.3f}")
 
 
