@@ -1,3 +1,4 @@
+from audioop import mul
 from functools import wraps
 import jax
 import jax.numpy as jnp
@@ -136,11 +137,21 @@ class SDESolver:
             
         """
 
-        assert problem.x0.shape == problem.a(problem.x0).shape
-        assert problem.x0.shape[0] == problem.b(problem.x0).shape[0]
+        multiple_intial_conditions_provided = (problem.x0.ndim == 2)
+        if multiple_intial_conditions_provided and n_trajectories is not None:
+            raise ValueError('n_trajectories option not supproted with multiple inital conditions!')
 
-        dimension, noise_terms = problem.b(problem.x0).shape
+        if multiple_intial_conditions_provided:
+            initial_conditions = problem.x0
+        else:
+            initial_conditions = problem.x0.reshape(1, -1)
+        
+        assert initial_conditions[0].shape == problem.a(initial_conditions[0]).shape
+        assert initial_conditions[0].shape[0] == problem.b(initial_conditions[0]).shape[0]
 
+        dimension, noise_terms = problem.b(initial_conditions[0]).shape
+
+        
         def L_t(f):
             return L_t_operator(f,problem)
 
@@ -272,18 +283,19 @@ class SDESolver:
                     )
                    )
 
-        @jax.vmap
-        def get_solution(key):
+        def get_solution(key, x0):
             _ , chunked_solution = jax.lax.scan(
                 lambda state, key: get_solution_fragment(state,key),
-                (t0,problem.x0,w0),
+                (t0,x0,w0),
                 jax.random.split(key, number_of_chunks // chunks_per_randomization)
                 )
 
             return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
+        
+        get_solution = jax.vmap(get_solution, in_axes=None)
 
-        keys = jax.random.split(key, n_trajectories)
-        solutions = get_solution(keys)
+        keys = jax.random.split(key, initial_conditions.shape[0])
+        solutions = get_solution(keys, initial_conditions)
         if progress_bar:
             p_bar.refresh()
             p_bar.close()
