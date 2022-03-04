@@ -145,6 +145,7 @@ class SDESolver:
             initial_conditions = problem.x0
         else:
             initial_conditions = problem.x0.reshape(1, -1)
+            initial_conditions = jnp.tile(initial_conditions, (n_trajectories, 1))
         
         assert initial_conditions[0].shape == problem.a(initial_conditions[0]).shape
         assert initial_conditions[0].shape[0] == problem.b(initial_conditions[0]).shape[0]
