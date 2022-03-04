@@ -49,9 +49,14 @@ class SDEProblem:
     # dimension & shape validation
         
     x0 = jnp.array(x0, dtype=jax.numpy.float32)
-
-    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x0).shape,jax.eval_shape(a,x0).dtype)
-    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x0).shape,jax.eval_shape(b,x0).dtype)
+    
+    if x0.ndim == 2: # array of initial conditions passed
+        x_test = x0[0]
+    else:
+        x_test = x0
+        
+    (a_x0_shape, a_x0_dtype) = (jax.eval_shape(a,x_test).shape,jax.eval_shape(a,x_test).dtype)
+    (b_x0_shape, b_x0_dtype) = (jax.eval_shape(b,x_test).shape,jax.eval_shape(b,x_test).dtype)
 
     if x0.ndim == len(a_x0_shape) == len(b_x0_shape) == 0:
       self.x0 = x0.reshape(1)
@@ -70,6 +75,16 @@ class SDEProblem:
     elif x0.ndim == len(a_x0_shape) == 1 and len(b_x0_shape) == 2:
       # vector case
       if not x0.shape[0] == a_x0_shape[0] == b_x0_shape[0]:
+        raise ValueError(f'Incosistent shapes: {x0.shape}, {a_x0_shape}, {b_x0_shape}')   
+
+      self.x0 = x0
+      self.a = a
+      self.b = b
+      self.dimension, self.noise_terms = b_x0_shape
+
+    elif x0.ndim == 2 and len(a_x0_shape) == 1 and len(b_x0_shape) ==2:
+      # vector case, multiple initial conditions
+      if not x0.shape[1] == a_x0_shape[0] == b_x0_shape[0]:
         raise ValueError(f'Incosistent shapes: {x0.shape}, {a_x0_shape}, {b_x0_shape}')   
 
       self.x0 = x0

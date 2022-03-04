@@ -292,7 +292,7 @@ class SDESolver:
 
             return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
         
-        get_solution = jax.vmap(get_solution, in_axes=None)
+        get_solution = jax.vmap(get_solution, in_axes=(0, 0))
 
         keys = jax.random.split(key, initial_conditions.shape[0])
         solutions = get_solution(keys, initial_conditions)
