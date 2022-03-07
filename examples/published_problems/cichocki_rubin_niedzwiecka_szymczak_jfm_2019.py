@@ -46,12 +46,8 @@ def noise(x):
 problem = pychastic.sde_problem.SDEProblem(
       drift,
       noise,
-      #x0 = jnp.reshape(jnp.array([[0.,0.,0.],[0.,0.,4.]]),(3*n_beads,)), # two beads
-      x0 = jnp.reshape(jnp.array([[-2.,0.,0.],[2.,0.,0.],[6.,0.,0.],[10.,0.,0.]]),(3*n_beads,)), # four beads
-      #x0 = jnp.reshape(jnp.array([[-2.,0.,0.]]),(3*n_beads,)), # SINGLE BEAD BENCHMARK
-      #dimension = 3*n_beads,
-      #noiseterms = 3*n_beads,
-      tmax = 2000.0)
+      x0 = jnp.reshape(jnp.array([[-2.,0.,0.],[2.,0.,0.],[6.,0.,0.],[10.,0.,0.]]),(3*n_beads,)),
+      tmax = 2000.)
 
 def moving_average(a, n):
     ret = jnp.cumsum(a)
@@ -69,11 +65,21 @@ def optimal_weights(x):
     inv_trace_mu = jnp.linalg.inv(trace_mu)
     return jnp.sum(inv_trace_mu,axis=-1) / jnp.sum(inv_trace_mu)
     
+def mstdc(x):    
+    v_trace_mobility = jax.vmap(trace_mobility)
+    trace_mu = jnp.mean(v_trace_mobility(x),axis=0)
+    inv_trace_mu = jnp.linalg.inv(trace_mu)
+    return 6. / jnp.sum(inv_trace_mu)
+    
 solver = pychastic.sde_solver.SDESolver(dt = 0.05)
-chunk_size = 1
+chunk_size = 100
 trajectories = solver.solve_many(problem,n_trajectories = 2**10, chunk_size = chunk_size, chunks_per_randomization = 1)
 
 weights = optimal_weights(trajectories["solution_values"][:,-1])
+mstdc_estimate = mstdc(trajectories["solution_values"][:,-1])
+
+print(f"Optimal weights {weights}")
+print(f"Minimal short time diffusion coefficient {mstdc_estimate}")
 
 big_bead_displacement = trajectories["solution_values"][:,:,0:3] - trajectories["solution_values"][:,jnp.newaxis,0,0:3]
 big_bead_distance = jnp.sum(big_bead_displacement**2,axis=-1)**0.5
@@ -91,6 +97,60 @@ centre_displacement = centre_trajectories[:,:,:] - centre_trajectories[:,0,jnp.n
 centre_distance = jnp.sum(centre_displacement**2,axis=-1)**0.5
 centre_msd = jnp.mean(centre_distance**2,axis=0)
 centre_instant_diffusion = jnp.ediff1d(centre_msd, to_end = float('nan')) / (solver.dt*chunk_size)
+
+@jax.jit
+def average_diagonals(mat):
+    n = mat.shape[0]
+    
+    # shift line n by n slots with ravel trick
+    stairs = ((jnp.pad(jnp.flip(mat,axis=0),((0,0),(0,n))).ravel())[:n*(2*n-1)]).reshape(n,2*n-1)
+    
+    weights = jnp.hstack([jnp.arange(1,n),jnp.arange(n,0,-1)])
+    return jnp.sum(stairs,axis=0) / weights
+
+def diffusion_estimate(sample):
+    velocities = jnp.diff(sample) / (solver.dt * chunk_size)
+    covariance = jnp.cov(velocities.T)
+    acf = average_diagonals(covariance) #autocovariance function
+    return jnp.sum(acf) * (solver.dt * chunk_size)
+
+velocities = jnp.diff(centre_displacement[:,:,0]) / (solver.dt * chunk_size)
+covariance = jnp.cov(velocities.T)
+acf = average_diagonals(covariance) #autocovariance function
+plt.plot(acf[len(acf)//2+1:])
+plt.show()
+
+centre_acf_estimate = (
+    diffusion_estimate(centre_displacement[:,:,0])
+    + diffusion_estimate(centre_displacement[:,:,1])
+    + diffusion_estimate(centre_displacement[:,:,2])
+    )
+
+print(f"{centre_acf_estimate=} {centre_acf_estimate * ma.pi=}")
+
+def least_squares(x,y):
+    Sx = jnp.mean(x)
+    Sy = jnp.mean(y)
+    Sxx = jnp.mean(x**2)
+    Sxy = jnp.mean(x*y)
+    Syy = jnp.mean(y**2)
+    delta = Sxx - Sx**2
+    
+    a = (Sxy - Sx * Sy) / delta
+    b = (Sxx * Sy - Sx * Sxy) / delta
+    
+    vy = Syy - a * Sxy - b * Sy
+    
+    va = vy / delta
+    vb = va * Sxx
+    
+    return {"a": a, "sigma_a": jnp.sqrt(va), "b": b, "sigma_b": jnp.sqrt(vb)}
+
+big_bead_apparent = least_squares(trajectories["time_values"][0],big_bead_msd)
+small_bead_apparent = least_squares(trajectories["time_values"][0],small_bead_msd)
+centre_apparent = least_squares(trajectories["time_values"][0],centre_msd)
+
+print(f"{big_bead_apparent=}\n{small_bead_apparent=}\n{centre_apparent=}")
 
 
 #
@@ -112,16 +172,8 @@ plt.plot(
 plt.plot(
     moving_average(trajectories["time_values"][0],n=window),
     moving_average(centre_instant_diffusion,n=window)
-    )    
+    )  
 
-def beta_regression(a,b):
-    return (jnp.corrcoef(jnp.array([a,b]))[0,1]) * jnp.std(b) / jnp.std(a)
-
-big_bead_apparent = beta_regression(trajectories["time_values"][0],big_bead_msd)
-small_bead_apparent = beta_regression(trajectories["time_values"][0],small_bead_msd)
-centre_apparent = beta_regression(trajectories["time_values"][0],centre_msd)
-
-print(f"{big_bead_apparent=}\n{small_bead_apparent=}\n{centre_apparent=}")
 
 #plt.plot(trajectories[0]["time_values"],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,0:3]-sol[:,0,np.newaxis,0:3])**2,axis=2),axis=0),label='First, big bead') # big bead
 #plt.plot(trajectories[0]["time_values"],(1.0/len(trajectories))*np.sum(np.sum((sol[:,:,9:12]-sol[:,0,np.newaxis,9:12])**2,axis=2),axis=0),label='Last, small bead') # small bead
