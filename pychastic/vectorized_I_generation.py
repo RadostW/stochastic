@@ -276,6 +276,7 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
             return {"d_w": dW_scaled, "d_ww": dI_scaled}
 
         if scheme == "wagner_platen":
+            #key = jax.random.PRNGKey(0)
             u = jax.random.normal(key, shape=(2, steps, noise_terms))
             dW_scaled = u[0]
             dZ_scaled = 0.5 * (u[0] + 3 ** (-0.5) * u[1])[:,:, jax.numpy.newaxis]

@@ -10,7 +10,7 @@ def noise(q):
     ret = jax.lax.cond(
     x > 1.0,
     lambda y: jnp.exp(x)   ,
-    lambda y: 1.0
+    lambda y: jnp.exp(x)
     ,x)
     return jnp.array([[ret]])
 
