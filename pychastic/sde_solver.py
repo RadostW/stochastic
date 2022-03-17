@@ -198,33 +198,19 @@ class SDESolver:
             wiener_integrals_rescaled = dict()
             wiener_integrals_rescaled['d_w'] = jax.numpy.sqrt(self.dt) * wiener_integrals['d_w']
 
-            if self.scheme == 'wagner_platen':
-                wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www']
+            wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www']
+            #wiener_integrals_rescaled['d_www'] = jax.numpy.zeros((noise_terms, noise_terms, noise_terms))
 
-            t += self.dt
             x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
-            
-            if step_post_processing is not None:
-                x = step_post_processing(x)
-            
-            w += wiener_integrals_rescaled['d_w']
+
             return (t, x, w), (t, x, w)
 
         t0 = 0.0
         w0 = jax.numpy.zeros(noise_terms)
 
-        if progress_bar:
-            p_bar = tqdm.tqdm(total = number_of_chunks)
-            def tap_func(*args,**kwargs):
-                p_bar.update()
-        else:
-            def tap_func(*args,**kwargs):
-                pass
-
         def chunk_function(chunk_start, wieners_chunk):
             # Parameters: chunk_start = (t0, x0, w0) values at beggining of chunk
             #             wieners_chunk = array of wiener increments
-            id_tap(tap_func,0)
             z = jax.lax.scan( scan_func , chunk_start , wieners_chunk )[0] #discard trajectory at chunk resolution
             return z, z
 
