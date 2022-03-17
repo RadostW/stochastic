@@ -16,14 +16,11 @@ def noise(q):
 
 def test_branched_coefficients():
     problem = pychastic.sde_problem.SDEProblem(
-        drift, noise, tmax=1., x0=jnp.array([0.0001])
+        drift, noise, tmax=5., x0=jnp.array([2.0])
     )
 
-    solver = pychastic.sde_solver.SDESolver(dt=0.5,scheme='wagner_platen')
+    solver = pychastic.sde_solver.SDESolver(dt=0.5)
 
     trajectories = solver.solve_many(
-        problem,
-        n_trajectories=2,
-        chunk_size=2,
-        chunks_per_randomization=2,
+        problem
     )
