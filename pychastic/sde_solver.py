@@ -12,34 +12,23 @@ def branch_fun(q):
     lambda y: jnp.exp(x)
     ,x)
     return jnp.array([[ret]])
-
         
-def tensordot1(a, b):
-    return jax.numpy.tensordot(a, b, axes=1)
-        
-def L_w_operator(f):
-    @wraps(f)
+def L_w(f):
     def wrapped(x):
-        return tensordot1(jax.jacobian(f)(x), branch_fun(x))
+        return jax.numpy.tensordot(jax.jacobian(f)(x), branch_fun(x), axes=1)
 
     return wrapped
 
 
 class SDESolver:
 
-    def __init__(
-        self,
-        dt=0.01
-    ):
-        self.dt = dt
+    def __init__(self):
+        pass
 
     def solve_many(self):
                 
         t0 = 0.0
         w0 = jax.numpy.zeros(1)
-
-        def L_w(f):
-            return L_w_operator(f)
 
         id_ = lambda x: x
         f_www = L_w(L_w(L_w(id_)))
@@ -63,7 +52,7 @@ class SDESolver:
         key = jax.random.PRNGKey(0)
         
         def scan_func(x, y):
-            xp = step(x, y['d_www'])
+            xp = step(x, y)
             return (xp,xp)
 
         def chunk_function(chunk_start, wieners_chunk):
@@ -71,13 +60,13 @@ class SDESolver:
             return z, z
 
         def get_solution_fragment(starting_state,key):
-            wiener_integrals = { "d_www": jax.random.normal(key, shape=(4,1,1,1)) }
+            wiener_integrals = jax.random.normal(key, shape=(4,1,1,1))
 
             last_state , solution_values = jax.lax.scan(
                 chunk_function,
                 starting_state,
-                jax.tree_map(lambda x: jnp.reshape(x,(-1,2)+x.shape[1:]), wiener_integrals)
-            ) #discard carry, remember trajectory
+                jnp.reshape(wiener_integrals,(-1,2)+wiener_integrals.shape[1:])
+            )
 
             return (last_state, last_state)
 
