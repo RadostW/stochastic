@@ -4,13 +4,6 @@ import jax.numpy as jnp
 import numpy as np
 from pychastic.sde_problem import SDEProblem
 
-def get_wiener_integrals(key, steps=1, noise_terms=1):    
-    return {
-        "d_w": jnp.zeros((steps,1)),
-        "d_www": jax.random.normal(key, shape=(steps, noise_terms,1,1)),
-        
-    }
-
 def branch_fun(q):
     x = q[0]
     ret = jax.lax.cond(
@@ -41,10 +34,9 @@ class SDESolver:
         self.dt = dt
 
     def solve_many(self):
-        noise_terms = 1
                 
         t0 = 0.0
-        w0 = jax.numpy.zeros(noise_terms)
+        w0 = jax.numpy.zeros(1)
 
         def L_w(f):
             return L_w_operator(f)
@@ -54,7 +46,7 @@ class SDESolver:
 
         def step(
             x,
-            d_www=jax.numpy.zeros((noise_terms, noise_terms, noise_terms)),
+            d_www,
         ):
 
             new_x = (
@@ -70,19 +62,18 @@ class SDESolver:
         
         key = jax.random.PRNGKey(0)
         
-        def scan_func(carry, input_):
-            t, x, w = carry
-            x = step(x, d_www = input_['d_www'])
-            return (t, x, w), (t, x, w)
+        def scan_func(x, y):
+            xp = step(x, y['d_www'])
+            return (xp,xp)
 
         def chunk_function(chunk_start, wieners_chunk):
             z = jax.lax.scan( scan_func , chunk_start , wieners_chunk )[0]
             return z, z
 
         def get_solution_fragment(starting_state,key):
-            wiener_integrals = get_wiener_integrals(key, steps=2*2, noise_terms=noise_terms)    
+            wiener_integrals = { "d_www": jax.random.normal(key, shape=(4,1,1,1)) }
 
-            last_state , (time_values, solution_values, wiener_values) = jax.lax.scan(
+            last_state , solution_values = jax.lax.scan(
                 chunk_function,
                 starting_state,
                 jax.tree_map(lambda x: jnp.reshape(x,(-1,2)+x.shape[1:]), wiener_integrals)
@@ -94,7 +85,7 @@ class SDESolver:
         def get_solution(key):
             _ , chunked_solution = jax.lax.scan(
                 lambda state, key: get_solution_fragment(state,key),
-                (t0,jnp.array([0.1]),w0),
+                (jnp.array([0.1])),
                 jax.random.split(key, 1)
                 )
 
