@@ -21,6 +21,4 @@ def test_branched_coefficients():
 
     solver = pychastic.sde_solver.SDESolver(dt=0.5)
 
-    trajectories = solver.solve_many(
-        problem
-    )
+    trajectories = solver.solve_many()
