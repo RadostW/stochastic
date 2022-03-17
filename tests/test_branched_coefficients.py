@@ -1,4 +1,3 @@
-import pychastic
 import jax.numpy as jnp
 import jax
 
@@ -23,7 +22,7 @@ def solve_many():
 
     id_ = lambda x: x
     f_www = L_w(L_w(L_w(id_)))
-
+    
     def step(
         x,
         d_www,
@@ -56,7 +55,7 @@ def solve_many():
         last_state , solution_values = jax.lax.scan(
             chunk_function,
             starting_state,
-            jnp.reshape(wiener_integrals,(-1,2)+wiener_integrals.shape[1:])
+            jnp.reshape(wiener_integrals,(2,2)+wiener_integrals.shape[1:])
         )
 
         return (last_state, last_state)
@@ -78,3 +77,6 @@ def solve_many():
 
 def test_branched_coefficients():
     trajectories = solve_many()
+    
+if __name__ == "__main__":
+    trajectories = solve_many()    
