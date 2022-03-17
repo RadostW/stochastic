@@ -6,22 +6,13 @@ import tqdm
 from jax.experimental.host_callback import id_tap
 from pychastic.sde_problem import SDEProblem
 from pychastic.vectorized_I_generation import get_wiener_integrals
-
-
-#from jax.config import config
-#config.update('jax_disable_jit', True)
-
-def contract_all(a, b):
-    return jax.numpy.tensordot(a, b, axes=len(b.shape))
         
 def tensordot1(a, b):
     return jax.numpy.tensordot(a, b, axes=1)
 
-
 def tensordot2(a, b):
     return jax.numpy.tensordot(a, b, axes=2)
-    
-    
+        
 # Taylor-Ito expansion operators    
 def L_t_operator(f,problem):
     @wraps(f)
@@ -175,7 +166,12 @@ class SDESolver:
             new_x = x
 
             new_x += (
-                contract_all(f_www(x), d_www)
+                # x * d_www[0,0,0] # Ok
+                # x * f_www(x)[0,0,0,0] # Ok
+                jnp.array([1.]) * f_www(x)[0,0,0,0] * d_www[0,0,0] # AttributeError
+                #x * f_www(x)[0,0,0,0] * d_www[0,0,0] # AttributeError
+                # contract_all(f_www(x), d_www) # AttributeError
+                # f_www(x)[:,0,0,0] # AttributeError
             )
 
             return new_x
@@ -188,9 +184,6 @@ class SDESolver:
 
         key = jax.random.PRNGKey(seed)
         
-        #if step_post_processing is not None:
-        #    v_step_post_processing = jax.vmap(step_post_processing)
-
         def scan_func(carry, input_):
             t, x, w = carry
 
@@ -201,7 +194,7 @@ class SDESolver:
             wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www']
             #wiener_integrals_rescaled['d_www'] = jax.numpy.zeros((noise_terms, noise_terms, noise_terms))
 
-            x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
+            x = step(x, d_t=self.dt, scheme=self.scheme, d_w = wiener_integrals_rescaled['d_w'], d_www = wiener_integrals_rescaled['d_www'])
 
             return (t, x, w), (t, x, w)
 
@@ -240,83 +233,11 @@ class SDESolver:
                 jax.random.split(key, number_of_chunks // chunks_per_randomization)
                 )
 
-            return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
+            return chunked_solution
+            #return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
 
         keys = jax.random.split(key, n_trajectories)
         solutions = get_solution(keys)
-        if progress_bar:
-            p_bar.refresh()
-            p_bar.close()
+
         return solutions
-
-    def solve(self, problem, seed=0, chunk_size=1, chunks_per_randomization = None, progress_bar = True):
-        """
-        Solves SDE problem given by ``problem``. Integration parameters are controlled by attribues of ``SDESolver`` object.
-
-        Parameters
-        ----------
-        problem : SDEProblem
-            (Vector) SDE problem to be solved.
-        seed : int, optional
-            value of seed for PRNG.
-        chunk_size: int or None, optional
-            Make steps in solver in chunks of `chunk_size` steps.
-            If `chunk_size = n` then value at every nth step is returned.
-            If `None` then maximal size of chunk is used only final value is returned.
-        chunks_per_randomization: int or None, optional
-            Sample wiener trajectories once per `chunks_per_randomization` chunks.
-            If `chunks_per_randomization = n` then PRNG runs at every nth chunk.
-            If `None`, PRNG runs once, at beginning of simulation.
-            Smaller values lead to less memory usage. Larger values increase speed.
-        progress_bar: True, False
-            Display `tqdm` style progress bar during computation.
-
-        Returns
-        -------
-        dict
-            Under following keys in returned `dict` you'll find:
-
-            * ``time_values`` -- (`steps`,) jnp.array containing timestamps coresponding to each trajectory.
-            * ``solution_values`` -- (`steps`, `problem_dimension`) `jnp.array` containing values of integrated SDE.
-            * ``wiener_values`` -- (`steps`, `noise_dimension`) `jnp.array` containing values of Wiener processes driving the SDE.
-
-        Example
-        -------
-        >>> import pychastic
-        >>> import jax.numpy as jnp
-        >>> solver = pychastic.sde_solver.SDESolver()
-        >>> problem = pychastic.sde_problem.SDEProblem(
-        ... lambda x: jnp.array([1/(2*x[0]),0]),       # [1/2r,0]
-        ... lambda x: jnp.array([
-        ...    [jnp.cos(x[1]),jnp.sin(x[1])],           # cos phi,      sin phi
-        ...    [-jnp.sin(x[1])/x[0],jnp.cos(x[1])/x[0]] # -sin phi / r, cos phi / r
-        ... ]),
-        ... x0 = jnp.array([1.0,0.0]), # r=1.0, phi=0.0
-        ... tmax=0.02
-        ... )
-        >>> solution = solver.solve(problem)
-        >>> (r,phi) = (solution["solution_values"][-1,:])
-        >>> compare = {"integrated":(r*jnp.array([jnp.cos(phi),jnp.sin(phi)])).T,"exact":solution["wiener_values"][-1,:]+problem.x0}
-        >>> print(compare["integrated"],compare["exact"])
-            
-        """
-        solution = self.solve_many(problem, n_trajectories=1, seed=seed, chunk_size = chunk_size, chunks_per_randomization = chunks_per_randomization, progress_bar = progress_bar)
-        solution = jax.tree_map(lambda x: x[0], solution)
-        return solution
-
-if __name__ == '__main__':
-    a = 1
-    b = 1
-    scalar_geometric_bm = SDEProblem(
-        a = lambda x: a*x,
-        b = lambda x: b*x,
-        x0 = 1.0,
-        tmax = 1.0,
-        exact_solution = lambda x0, t, w: x0*np.exp((a-0.5*b*b)*t+b*w)
-    )
-    problem = scalar_geometric_bm
-    solver = SDESolver()
-    steps = 100
-    dt = problem.tmax / steps
-    solver.dt = dt
-    solver.solve_many(problem, n_trajectories=1000)
+        
