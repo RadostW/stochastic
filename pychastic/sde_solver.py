@@ -191,8 +191,8 @@ class SDESolver:
             wiener_integrals_rescaled = dict()
             wiener_integrals_rescaled['d_w'] = jax.numpy.sqrt(self.dt) * wiener_integrals['d_w']
 
-            wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www']
-            #wiener_integrals_rescaled['d_www'] = jax.numpy.zeros((noise_terms, noise_terms, noise_terms))
+            wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www'] # AttributeError
+            #wiener_integrals_rescaled['d_www'] = jax.numpy.zeros((noise_terms, noise_terms, noise_terms)) # Passed
 
             x = step(x, d_t=self.dt, scheme=self.scheme, d_w = wiener_integrals_rescaled['d_w'], d_www = wiener_integrals_rescaled['d_www'])
 

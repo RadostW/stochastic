@@ -278,18 +278,18 @@ def get_wiener_integrals(key, steps=1, noise_terms=1, scheme="euler", p=10):
         if scheme == "wagner_platen":
             u = jax.random.normal(key, shape=(2, steps, noise_terms))
             dW_scaled = u[0]
-            dZ_scaled = 0.5 * (u[0] + 3 ** (-0.5) * u[1])[..., jax.numpy.newaxis]
+            dZ_scaled = 0.5 * (u[0] + 3 ** (-0.5) * u[1])[:,:, jax.numpy.newaxis]
 
-            dI_scaled = 0.5 * (dW_scaled ** 2 - 1)[..., jax.numpy.newaxis]
+            dI_scaled = 0.5 * (dW_scaled ** 2 - 1)[:,:, jax.numpy.newaxis]
 
             return {
                 "d_w": dW_scaled,
                 "d_ww": dI_scaled,
                 "d_wt": dZ_scaled,
                 "d_tw": dW_scaled[..., jax.numpy.newaxis] - dZ_scaled,
-                "d_www": (0.5 * ((1.0 / 3.0) * dW_scaled ** 2 - 1) * dW_scaled)[
-                    ..., jax.numpy.newaxis, jax.numpy.newaxis
-                ],
+                #"d_www": (0.5 * ((1.0 / 3.0) * dW_scaled ** 2 - 1) * dW_scaled)[:,:, jax.numpy.newaxis, jax.numpy.newaxis],
+                "d_www": dW_scaled[:,:, jax.numpy.newaxis, jax.numpy.newaxis],
+                #"d_www": jnp.zeros((steps,noise_terms,1,1)),
             }
 
     # Below multidim implementations
