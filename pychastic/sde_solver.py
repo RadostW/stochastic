@@ -159,18 +159,7 @@ class SDESolver:
 
         id_ = lambda x: x
 
-        f_w = L(id_, "w")
-
-        f_t = L(id_, "t")
-        f_ww = L(id_, "ww")
-
-        f_tw = L(id_, "tw")
-        f_wt = L(id_, "wt")
         f_www = L(id_, "www")
-        #f_www = lambda x: jax.numpy.zeros((dimension,noise_terms,noise_terms,noise_terms))
-
-        f_tt = L(id_, "tt")
-
 
         def step(
             x,
@@ -184,24 +173,12 @@ class SDESolver:
         ):
 
             new_x = x
-            new_x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
-
-            if scheme == "euler":
-                return new_x
-
-            new_x += contract_all(f_ww(x), d_ww)
-
-            if scheme == "milstein":
-                return new_x
 
             new_x += (
-                contract_all(f_tw(x), d_tw)
-                + contract_all(f_wt(x), d_wt)
-                + contract_all(f_www(x), d_www)
-                + (f_tt(x)*d_t*d_t/2).squeeze()
+                contract_all(f_www(x), d_www)
             )
-            if scheme == "wagner_platen":
-                return new_x
+
+            return new_x
 
         steps_needed = int(problem.tmax / self.dt)
         tmp = chunks_per_randomization or 1
@@ -221,13 +198,8 @@ class SDESolver:
             wiener_integrals_rescaled = dict()
             wiener_integrals_rescaled['d_w'] = jax.numpy.sqrt(self.dt) * wiener_integrals['d_w']
 
-            if self.scheme == 'milstein' or self.scheme == 'wagner_platen':
-                wiener_integrals_rescaled['d_ww'] = self.dt * wiener_integrals['d_ww']
-
             if self.scheme == 'wagner_platen':
-                wiener_integrals_rescaled['d_wt']  = self.dt**(3/2) * wiener_integrals['d_wt']
-                wiener_integrals_rescaled['d_tw']  = self.dt**(3/2) * wiener_integrals['d_tw']
-                wiener_integrals_rescaled['d_www'] = self.dt**(3/2) * wiener_integrals['d_www']
+                wiener_integrals_rescaled['d_www'] = 0*self.dt**(3/2) * wiener_integrals['d_www']
 
             t += self.dt
             x = step(x, d_t=self.dt, scheme=self.scheme, **wiener_integrals_rescaled)
