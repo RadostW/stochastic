@@ -15,7 +15,7 @@ problem = pychastic.sde_problem.SDEProblem(
 )
 
 solver = pychastic.sde_solver.SDESolver()
-solver.scheme = 'milstein'
+solver.scheme = 'wagner_platen'
 
 dts = [2**(-x) for x in range(1,10,1)]
 n_samples = 2**15
