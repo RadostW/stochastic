@@ -125,3 +125,22 @@ def test_solve_many_handles_multiple_initial_conditions():
     
     assert result['solution_values'].ndim == 3
     assert result['solution_values'].shape[0] == n_copies
+
+def test_solve_many_handles_equation_with_branched_coefficients():
+    solver = SDESolver(scheme="milstein", dt=1e-1)    
+    @jax.numpy.vectorize  # won't work without decorator
+    def my_abs(x):
+        return jax.lax.cond(x>0, lambda x: x, lambda x: -x, x)
+    
+    problem = SDEProblem(
+        a=lambda x: -my_abs(x),
+        b=lambda x: jax.numpy.array(1.),
+        x0=1.0,
+        tmax=1.0,
+    )
+    result = solver.solve_many(problem)
+
+if __name__ == '__main__':
+    from jax.config import config
+    config.update('jax_disable_jit', True)
+    test_solve_many_handles_equation_with_branched_coefficients()
