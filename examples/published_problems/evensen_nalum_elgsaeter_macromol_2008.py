@@ -11,8 +11,9 @@ import jax
 import matplotlib.pyplot as plt
 import numpy as np
 
-mobility = 2.0*jnp.eye(3)
-mobility_d = jnp.linalg.cholesky(mobility) # Compare with equation: Evensen2008.6
+mobility = jnp.eye(3)
+mobility_d = jnp.linalg.cholesky(mobility)  # Compare with equation: Evensen2008.6
+
 
 def spin_matrix(q):
     # Antisymmetric matrix dual to q
@@ -21,52 +22,76 @@ def spin_matrix(q):
 
 def rotation_matrix(q):
     # Compare with equation: Evensen2008.11
-    phi = jnp.sqrt(jnp.sum(q ** 2))
+    unsafe_phi_squared = jnp.sum(q ** 2)
+    phi_squared = jnp.maximum(unsafe_phi_squared, jnp.array(0.01) ** 2)
+    phi = jnp.sqrt(phi_squared)
+
     rot = (
         (jnp.sin(phi) / phi) * spin_matrix(q)
         + jnp.cos(phi) * jnp.eye(3)
         + ((1.0 - jnp.cos(phi)) / phi ** 2) * q.reshape(1, 3) * q.reshape(3, 1)
     )
-    return jax.lax.cond(phi > 0.01, lambda: rot, lambda: 1.0 * jnp.eye(3))
+
+    return jnp.where(
+        phi_squared == unsafe_phi_squared,
+        rot,
+        (1.0 - 0.5 * unsafe_phi_squared) * jnp.eye(3)
+        + spin_matrix(q)
+        + 0.5 * q.reshape(1, 3) * q.reshape(3, 1),
+    )
 
 
 def transformation_matrix(q):
-    # Compare with equation: Evensen2008.12
-    phi = jnp.sqrt(jnp.sum(q ** 2))
-    trans = (
-        0.5
-        * (1.0 / phi ** 2 - (jnp.sin(phi) / (2.0 * phi * (1.0 - jnp.cos(phi)))))
-        * q.reshape(1, 3)
-        * q.reshape(3, 1)
-        + spin_matrix(q)
-        + (phi * jnp.sin(phi) / (1.0 - jnp.cos(phi))) * jnp.eye(3)
+    # Compare with equation: Evensen2008.12 - there are typos!
+    # Compare with equation: Ilie2014.A9-A10 - no typos there
+    unsafe_phi_squared = jnp.sum(q ** 2)
+    phi_squared = jnp.maximum(unsafe_phi_squared, jnp.array(0.01) ** 2)
+    phi = jnp.sqrt(phi_squared)
+
+    c = phi * jnp.sin(phi) / (1.0 - jnp.cos(phi))
+
+    trans = jnp.where(
+        phi_squared == unsafe_phi_squared,
+        ((1.0 - 0.5 * c) / (phi ** 2)) * q.reshape(1, 3) * q.reshape(3, 1)
+        + 0.5 * spin_matrix(q)
+        + 0.5 * c * jnp.eye(3),
+        (1.0 / 12.0) * q.reshape(1, 3) * q.reshape(3, 1)
+        + 0.5 * spin_matrix(q)
+        + jnp.eye(3),
     )
-    return jax.lax.cond(phi > 0.01, lambda: trans, lambda: 1.0 * jnp.eye(3))
+
+    return trans
 
 
 def metric_force(q):
     # Compare with equation: Evensen2008.10
-    phi = jnp.sqrt(jnp.sum(q ** 2))
-    scale = jax.lax.cond(
-        phi < 0.01,
-        lambda t: -t / 6.0,
-        lambda t: jnp.sin(t) / (1.0 - jnp.cos(t)) - 2.0 / t,
-        phi,
+    unsafephi = jnp.sqrt(jnp.sum(q ** 2))
+    phi = jnp.maximum(unsafephi, jnp.array(0.01))
+
+    scale = jnp.where(
+        phi == unsafephi,
+        jnp.sin(phi) / (1.0 - jnp.cos(phi)) - 2.0 / phi,
+        -unsafephi / 6.0,
     )
-    return jax.lax.cond(
-        phi > 0.0, lambda: (q / phi) * scale, lambda: jnp.array([0.0, 0.0, 0.0])
-    )
+
+    return jnp.where(phi == unsafephi, (q / phi) * scale, jnp.array([0.0, 0.0, 0.0]))
 
 
 def t_mobility(q):
     # Mobility matrix transformed to coordinates.
     # Compare with equation: Evensen2008.2
-    return transformation_matrix(q) @ mobility @ (transformation_matrix(q).T)
+    return (
+        transformation_matrix(q)
+        @ (rotation_matrix(q).T)
+        @ mobility
+        @ rotation_matrix(q)
+        @ (transformation_matrix(q).T)
+    )
 
 
 def drift(q):
     # Drift term.
-    # Compare with equation: Evensen2008.5 
+    # Compare with equation: Evensen2008.5
     # jax.jacobian has differentiation index last (like mu_ij d_k) so divergence is contraction of first and last axis.
     return t_mobility(q) @ metric_force(q) + jnp.einsum(
         "iji->j", jax.jacobian(t_mobility)(q)
@@ -80,46 +105,65 @@ def noise(q):
 
 
 def canonicalize_coordinates(q):
-    phi = jnp.sqrt(jnp.sum(q ** 2))
+    unsafephi = jnp.sqrt(jnp.sum(q ** 2))
+    phi = jnp.maximum(unsafephi, jnp.array(0.01))
+
     max_phi = jnp.pi
     canonical_phi = jnp.fmod(phi + max_phi, 2.0 * max_phi) - max_phi
-    return jax.lax.cond(
-        phi > max_phi,
-        lambda canonical_phi, phi, q: (canonical_phi / phi) * q,
-        lambda canonical_phi, phi, q: q,
-        canonical_phi,
-        phi,
+
+    return jax.lax.select(
+        phi > max_phi,  # and phi == unsafephi
+        (canonical_phi / phi) * q,
         q,
     )
 
 
 problem = pychastic.sde_problem.SDEProblem(
-    drift, noise, tmax=20.0, x0=jnp.array([1.0, 0.0, 0.0])
+    drift, noise, tmax=2.0, x0=jnp.array([0.0, 0.0, 0.0])
 )
 
-solver = pychastic.sde_solver.SDESolver(dt=0.01)
+
+solver = pychastic.sde_solver.SDESolver(dt=0.1, scheme="euler")
 
 trajectories = solver.solve_many(
     problem,
     step_post_processing=canonicalize_coordinates,
-    n_trajectories=1000,
-    chunk_size=100,
-    chunks_per_randomization=1,
+    n_trajectories=10000,
+    chunk_size=1,
+    chunks_per_randomization=2,
 )
 
-final_angles = np.array(
-    jnp.sqrt(jnp.sum(trajectories["solution_values"][:, -1, :] ** 2, axis=1))
+
+rotation_matrices = jax.vmap(jax.vmap(rotation_matrix))(trajectories["solution_values"])
+rotation_matrices = jnp.einsum(
+    "ij,abjk", (rotation_matrix(problem.x0).T), rotation_matrices
 )
 
-final_x = np.array(trajectories["solution_values"][:, -1, 0])
-final_y = np.array(trajectories["solution_values"][:, -1, 1])
-final_z = np.array(trajectories["solution_values"][:, -1, 2])
+epsilon_tensor = jnp.array(
+    [
+        [[0, 0, 0], [0, 0, 1], [0, -1, 0]],
+        [[0, 0, -1], [0, 0, 0], [1, 0, 0]],
+        [[0, 1, 0], [-1, 0, 0], [0, 0, 0]],
+    ]
+)
 
-xvals = np.arange(0, np.pi, 0.01)
-yvals = (np.pi / 20) * len(final_angles) * ((1.0 - np.cos(xvals)) / np.pi)
-plt.plot(xvals, yvals)
-plt.hist(final_angles, 20)
-# plt.hist(final_x, 20)
-# plt.hist(final_y, 20)
-# plt.hist(final_z, 20)
+delta_u = -0.5 * jnp.einsum("kij,abij->abk", epsilon_tensor, rotation_matrices)
+
+cor = jnp.mean(delta_u ** 2, axis=0)
+
+t_a = trajectories["time_values"][0]
+t_t = jnp.arange(0.0, trajectories["time_values"][0][-1], 0.005)
+plt.plot(t_a, cor[:, 0])
+plt.plot(t_a, cor[:, 1])
+plt.plot(t_a, cor[:, 2])
+
+D = 1.0
+plt.plot(
+    t_t,
+    1.0 / 6.0
+    - (5.0 / 12.0) * jnp.exp(-6.0 * D * t_t)
+    + (1.0 / 4.0) * jnp.exp(-2.0 * D * t_t),
+    label="theoretical",
+)
+
 plt.show()
