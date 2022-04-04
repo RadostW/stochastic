@@ -20,7 +20,7 @@ solver = pychastic.sde_solver.SDESolver()
 solver.scheme = 'milstein'
 
 dt = 2**(-8)
-n_samples = 10000
+n_samples = 100
 
 solver.dt = dt
 solution = solver.solve_many(problem,n_samples,seed=0)
@@ -28,28 +28,61 @@ x = solution['solution_values'][..., 0]*jnp.cos(solution['solution_values'][...,
 y = solution['solution_values'][..., 0]*jnp.sin(solution['solution_values'][..., 1])
 
 barrier = 2
-hit_occured = (y > barrier).any(axis=1)
-hit_index = (y > barrier).argmax(axis=1)  # TODO: consider interpolating exact hitting time
+hit_occured_in_solution = (y > barrier).any(axis=1)
+trajectories = jnp.stack([x, y], axis=-1)[hit_occured_in_solution]  # (n_traj, step, coord)
 
-trajs = jnp.stack([x, y], axis=-1)  # (n_traj, step, coord)
-def stop_traj(traj):
-    hit_index = (traj[:, 1] > barrier).argmax()
-    return jax.lax.cond(hit_index != 0, lambda _: traj[hit_index], lambda _: traj[-1], 0)
+def process_trajectory(trajectory):
+    # should be applied to trajs that crossed barrier
+    hit_index = (trajectory[:, 1] > barrier).argmax()
+    
+    position_before = trajectory[hit_index-1]
+    position_after = trajectory[hit_index]
+    
+    y_before = position_before[1]
+    y_after = position_after[1]
 
-stopped_trajs = jax.vmap(stop_traj)(trajs)
+    weight = (barrier - y_before)/(y_after - y_before)
+    
+    interpolated_hit_place = position_after*weight + position_before*(1-weight)
+    interpolated_hit_time = dt*(hit_index+weight)
+    
+    return {
+        'interpolated_hit_place': interpolated_hit_place,
+        'interpolated_hit_time': interpolated_hit_time
+    }
 
+process_trajectory(trajectories[0])
+data = jax.vmap(process_trajectory)(trajectories)
+
+# hit time histogram vs theory
 plt.figure()
-plt.hist(np.array(hit_index[hit_occured])*dt, bins=50, density=True)
+
+plt.hist(np.array(data['interpolated_hit_time']), bins=min(50, n_samples//10), density=True)
 
 t = np.linspace(0, problem.tmax, 100)[1:]
 theoretical_hitting_time_desity = barrier/(sigma*np.sqrt(2*np.pi*t**3))*np.exp(-(barrier-y_drift*t)**2/(2*sigma**2*t))
 plt.plot(t, theoretical_hitting_time_desity)
+plt.show()
 plt.savefig('stopping_time_hist.png')
 plt.close()
 
+# stopped processes
+
+def plot_stopped_trajectories(fraction_of_time, **kwargs):    
+    trimmed_trajectories = trajectories[:, :int(fraction_of_time*problem.tmax/dt)]
+    hit_occured = (trimmed_trajectories[:, :, 1] > barrier).any(axis=1)
+    trimmed_trajectories = trimmed_trajectories[hit_occured]
+    data = np.array(
+        jax.vmap(process_trajectory)(trimmed_trajectories)['interpolated_hit_place'].T
+    )
+    #data = np.array(trimmed_trajectories[:, -1, :].T)
+    plt.scatter(*data, alpha=0.2, label=f"{fraction_of_time:.2f}", **kwargs)
+
 plt.figure()
-plt.scatter(*jax.vmap(stop_traj)(trajs[:, :int(problem.tmax/dt*(1/3))]).T, alpha=0.1, label='1/3')
-plt.scatter(*jax.vmap(stop_traj)(trajs[:, :int(problem.tmax/dt*(1/2))]).T, alpha=0.1, label='1/2')
+plot_stopped_trajectories(1/3)
+plot_stopped_trajectories(1/2)
 plt.legend()
 plt.savefig('stopped.png')
 plt.close()
+
+# comparison of solution hit places vs wiener hit places (interpolated)
