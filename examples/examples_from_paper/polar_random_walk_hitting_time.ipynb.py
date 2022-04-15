@@ -57,7 +57,7 @@ def analyze_solver(solver, plots=False):
     w1 = solution['wiener_values'][..., 0]
     w2 = solution['wiener_values'][..., 1]
     x_real = w1+2
-    y_real = w2+y_drift*y_drift*solution['time_values'][0]/4  # /4?
+    y_real = w2+y_drift*solution['time_values'][0]
 
     r_sol = solution['solution_values'][..., 0]
     phi_sol = solution['solution_values'][..., 1]
