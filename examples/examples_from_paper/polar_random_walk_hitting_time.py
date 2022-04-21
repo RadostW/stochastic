@@ -1,4 +1,3 @@
-# %%
 import pychastic
 import jax.numpy as jnp
 import numpy as np
@@ -16,16 +15,15 @@ problem = pychastic.sde_problem.SDEProblem(
         [[jnp.cos(x[1]), jnp.sin(x[1])], [-jnp.sin(x[1]) / x[0], jnp.cos(x[1]) / x[0]]]
     ),
     x0=jnp.array([2.0, 0.0]),
-    tmax=1.0,
+    tmax=2.0,
 )
 
-n_samples = 1000
+n_samples = 10000
 
 solver = pychastic.sde_solver.SDESolver()
 solver.scheme = 'euler'
 solver.dt = 2**(-10)
 
-# %%
 def process_trajectory(trajectory):
     hit_index = (trajectory[:, 1] > y_barrier).argmax()
     
@@ -86,6 +84,9 @@ def analyze_solver(solver, plots=False):
     hit_time_error_std = hit_time_error.std().item()
     hit_place_x_rmse = rmse(hit_place_x_error).item()
     hit_place_x_error_std = hit_place_x_error.std().item()
+    
+    hit_time_mean = jnp.mean(hit_time_sol)
+    hit_place_x_mean = jnp.mean(hit_place_x_sol)
 
     if plots:
         n_traj = 0
@@ -94,7 +95,7 @@ def analyze_solver(solver, plots=False):
         plt.legend()
         plt.show()
 
-        plt.figure()
+        #plt.figure()
         plt.hist(np.array(hit_time_sol), bins=min(50, n_samples//10), density=True)
         t = np.linspace(0, problem.tmax, 100)[1:]
         theoretical_hitting_time_desity = y_barrier/(sigma*np.sqrt(2*np.pi*t**3))*np.exp(-(y_barrier-y_drift*t)**2/(2*sigma**2*t))
@@ -113,14 +114,19 @@ def analyze_solver(solver, plots=False):
         'hit_time_error_std': hit_time_error_std,
         'hit_place_x_rmse': hit_place_x_rmse,
         'hit_place_x_error_std': hit_place_x_error_std,
+        
+        'hit_time_mean': hit_time_mean,
+        'hit_place_x_mean' : hit_place_x_mean,
     }
 
-result = analyze_solver(solver, plots=True)
-plt.savefig('stopping_time_histogram.png')
+result = analyze_solver(solver, plots=False)
+#plt.savefig('stopping_time_histogram.png')
+#plt.show()
 
 # %%
-schemes = ['euler', 'milstein', 'wagner_platen']
-n_stepss = 2**np.arange(4, 10+1)
+#schemes = ['euler', 'milstein', 'wagner_platen']
+schemes = ['euler', 'milstein']
+n_stepss = 2**np.arange(3, 10+1)
 results = []
 
 for scheme in schemes:
@@ -129,7 +135,9 @@ for scheme in schemes:
         dt = problem.tmax / n_steps
         solver = pychastic.sde_solver.SDESolver(dt=dt, scheme=scheme)
         result = analyze_solver(solver)
-        data = {k: v for k, v in result.items() if 'error' in k or 'rmse' in k}
+        print(f"{result['hit_time_mean']=}")
+        print(f"{result['hit_place_x_mean']=}")
+        data = {k: v for k, v in result.items() if 'error' in k or 'rmse' in k or 'mean' in k}
         data['scheme'] = scheme
         data['n_steps'] = n_steps
         results.append(data)
@@ -154,6 +162,18 @@ for scheme, df in pd.DataFrame(results).groupby('scheme'):
 plt.xlabel('n steps')
 plt.ylabel('error rmse +- std')
 plt.title('hit place x')
+plt.legend()
+plt.savefig('hit_place_x.png')
+plt.show()
+
+
+plt.figure(dpi=150)
+for scheme, df in pd.DataFrame(results).groupby('scheme'):
+    plt.plot(df.n_steps, df.hit_time_mean, label=scheme)
+
+plt.xlabel('n steps')
+plt.ylabel('mean +- something')
+plt.title('hit time mean')
 plt.legend()
 plt.savefig('hit_place_x.png')
 plt.show()
