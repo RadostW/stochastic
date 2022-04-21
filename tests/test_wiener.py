@@ -76,16 +76,22 @@ def test_integral_generation_euler():
             )
         }
     )
-    
-    
-    
-    
+
+
 def test_integral_generation_milstein():
     tested_scheme = "milstein"
-    
+
     # Prepare values of means and second moments = E(XY)
-    tested_integrals = [[1,1], [1,2], [2,1], [2,2], [1], [2], [0]]  # [dW1,dW2,dt]
-    tested_labels = ["d_w1 d_w1", "d_w1 d_w2", "d_w2 d_w1", "d_w2 d_w2", "d_w1", "d_w2", "d_t"]
+    tested_integrals = [[1, 1], [1, 2], [2, 1], [2, 2], [1], [2], [0]]  # [dW1,dW2,dt]
+    tested_labels = [
+        "d_w1 d_w1",
+        "d_w1 d_w2",
+        "d_w2 d_w1",
+        "d_w2 d_w2",
+        "d_w1",
+        "d_w2",
+        "d_t",
+    ]
     target_means = jnp.array(
         [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
     )
@@ -107,10 +113,10 @@ def test_integral_generation_milstein():
 
     sample_integrals = jnp.array(
         [
-            sample_integrals["d_ww"][:,0,0],
-            sample_integrals["d_ww"][:,0,1],
-            sample_integrals["d_ww"][:,1,0],
-            sample_integrals["d_ww"][:,1,1],
+            sample_integrals["d_ww"][:, 0, 0],
+            sample_integrals["d_ww"][:, 0, 1],
+            sample_integrals["d_ww"][:, 1, 0],
+            sample_integrals["d_ww"][:, 1, 1],
             sample_integrals["d_w"][:, 0],
             sample_integrals["d_w"][:, 1],
             jnp.ones_like(sample_integrals["d_w"][:, 0]),
@@ -153,12 +159,13 @@ def test_integral_generation_milstein():
         }
     )
 
+
 def test_integral_generation_wagner_platen_1d():
     tested_scheme = "wagner_platen"
 
     # Prepare values of means and second moments = E(XY)
-    tested_integrals = [[1,1,1], [1,0], [0,1] , [1,1], [1], [0]]  # [dW1,dW2,dt]
-    tested_labels = ["d_www","d_wt","d_tw","d_ww","d_w","d_t"]
+    tested_integrals = [[1, 1, 1], [1, 0], [0, 1], [1, 1], [1], [0]]  # [dW1,dW2,dt]
+    tested_labels = ["d_www", "d_wt", "d_tw", "d_ww", "d_w", "d_t"]
     target_means = jnp.array(
         [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
     )
@@ -180,10 +187,10 @@ def test_integral_generation_wagner_platen_1d():
 
     sample_integrals = jnp.array(
         [
-            sample_integrals["d_www"][:,0,0,0],
-            sample_integrals["d_wt"][:,0,0],
-            sample_integrals["d_tw"][:,0,0],
-            sample_integrals["d_ww"][:,0,0],
+            sample_integrals["d_www"][:, 0, 0, 0],
+            sample_integrals["d_wt"][:, 0, 0],
+            sample_integrals["d_tw"][:, 0, 0],
+            sample_integrals["d_ww"][:, 0, 0],
             sample_integrals["d_w"][:, 0],
             jnp.ones_like(sample_integrals["d_w"][:, 0]),
         ]
@@ -224,9 +231,8 @@ def test_integral_generation_wagner_platen_1d():
             )
         }
     )
-    
-    
-    
+
+
 def test_integral_generation_wagner_platen():
     tested_scheme = "wagner_platen"
 
@@ -234,28 +240,28 @@ def test_integral_generation_wagner_platen():
 
     tested_integrals = list()
     tested_labels = list()
-    
-    for i,j,k in itertools.product(range(0,3),repeat=3):
-        zeros = (i==0) + (j==0) + (k==0)
+
+    for i, j, k in itertools.product(range(0, 3), repeat=3):
+        zeros = (i == 0) + (j == 0) + (k == 0)
         if zeros == 0:
-            tested_integrals += [[i,j,k]]
-            tested_labels += [f'd_{i}{j}{k}']
-        
-    for i,j in itertools.product(range(0,3),repeat=2):
-        zeros = (i==0) + (j==0)
+            tested_integrals += [[i, j, k]]
+            tested_labels += [f"d_{i}{j}{k}"]
+
+    for i, j in itertools.product(range(0, 3), repeat=2):
+        zeros = (i == 0) + (j == 0)
         if zeros != 2:
-            tested_integrals += [[i,j]]
-            tested_labels += [f'd_{i}{j}']        
-            
-    for i, in itertools.product(range(0,3),repeat=1):
-        zeros = (i==0)
+            tested_integrals += [[i, j]]
+            tested_labels += [f"d_{i}{j}"]
+
+    for (i,) in itertools.product(range(0, 3), repeat=1):
+        zeros = i == 0
         if zeros != 1:
             tested_integrals += [[i]]
-            tested_labels += [f'd_{i}']
-        
-    tested_integrals += [[0],[0,0]]
-    tested_labels += ['d_0','d_00']
-        
+            tested_labels += [f"d_{i}"]
+
+    tested_integrals += [[0], [0, 0]]
+    tested_labels += ["d_0", "d_00"]
+
     target_means = jnp.array(
         [pychastic.wiener_integral_moments.E(idx)(1) for idx in tested_integrals]
     )
@@ -272,41 +278,31 @@ def test_integral_generation_wagner_platen():
     seed = 0
     key = jax.random.PRNGKey(seed)
     sample_integrals = pychastic.vectorized_I_generation.get_wiener_integrals(
-        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2, p = 50
+        key, scheme=tested_scheme, steps=2 ** samples_exponent, noise_terms=2, p=50
     )
 
     sample_integrals = jnp.array(
         [
-            sample_integrals["d_www"][:,0,0,0],
-            sample_integrals["d_www"][:,0,0,1],
-            
-            sample_integrals["d_www"][:,0,1,0],
-            sample_integrals["d_www"][:,0,1,1],
-            
-            sample_integrals["d_www"][:,1,0,0],
-            sample_integrals["d_www"][:,1,0,1],
-            
-            sample_integrals["d_www"][:,1,1,0],
-            sample_integrals["d_www"][:,1,1,1],
-
-            sample_integrals["d_tw"][:,0,0],
-            sample_integrals["d_tw"][:,0,1],
-
-            sample_integrals["d_wt"][:,0,0],
-            
-            sample_integrals["d_ww"][:,0,0],
-            sample_integrals["d_ww"][:,0,1],
-            
-            sample_integrals["d_wt"][:,1,0],
-            
-            sample_integrals["d_ww"][:,1,0],
-            sample_integrals["d_ww"][:,1,1],
-
+            sample_integrals["d_www"][:, 0, 0, 0],
+            sample_integrals["d_www"][:, 0, 0, 1],
+            sample_integrals["d_www"][:, 0, 1, 0],
+            sample_integrals["d_www"][:, 0, 1, 1],
+            sample_integrals["d_www"][:, 1, 0, 0],
+            sample_integrals["d_www"][:, 1, 0, 1],
+            sample_integrals["d_www"][:, 1, 1, 0],
+            sample_integrals["d_www"][:, 1, 1, 1],
+            sample_integrals["d_tw"][:, 0, 0],
+            sample_integrals["d_tw"][:, 0, 1],
+            sample_integrals["d_wt"][:, 0, 0],
+            sample_integrals["d_ww"][:, 0, 0],
+            sample_integrals["d_ww"][:, 0, 1],
+            sample_integrals["d_wt"][:, 1, 0],
+            sample_integrals["d_ww"][:, 1, 0],
+            sample_integrals["d_ww"][:, 1, 1],
             sample_integrals["d_w"][:, 0],
             sample_integrals["d_w"][:, 1],
-            
-            jnp.ones_like(sample_integrals["d_w"][:, 0]), #d_0 = dt
-            0.5 * jnp.ones_like(sample_integrals["d_w"][:, 0]), #d_00 = dt^2/2
+            jnp.ones_like(sample_integrals["d_w"][:, 0]),  # d_0 = dt
+            0.5 * jnp.ones_like(sample_integrals["d_w"][:, 0]),  # d_00 = dt^2/2
         ]
     ).T
 
@@ -336,10 +332,15 @@ def test_integral_generation_wagner_platen():
     )
     products_error = sample_mean_products - target_mean_products
 
-    far_entries = jnp.logical_not( products_close )
+    far_entries = jnp.logical_not(products_close)
 
-    far_products_labels = [x+y for x,y in np.array(list(itertools.product(tested_labels, tested_labels)))[far_entries]]
-    
+    far_products_labels = [
+        x + y
+        for x, y in np.array(list(itertools.product(tested_labels, tested_labels)))[
+            far_entries
+        ]
+    ]
+
     assert products_close.all(), "Expected products incorrect \n" + pprint.pformat(
         {
             label: (bool(flag), float(error))
@@ -349,7 +350,8 @@ def test_integral_generation_wagner_platen():
                 far_products_labels,
             )
         }
-    ,sort_dicts=False)
+    )
+
 
 if __name__ == "__main__":
     test_integral_generation_euler()

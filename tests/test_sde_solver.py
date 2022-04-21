@@ -110,3 +110,18 @@ def test_again_exact_solution_vector(solver: SDESolver, problem, steps, quantile
     )
     l2_end_error = (end_error ** 2).sum() ** 0.5
     assert abs(l2_end_error) < quantile_99  # .99 quantile
+
+
+def test_solve_many_handles_multiple_initial_conditions():
+    solver = SDESolver(scheme="milstein", dt=1e-2)
+    problem = scalar_geometric_bm
+    n_copies = 4
+    problem.x0 = jax.numpy.tile(problem.x0, (n_copies, 1))
+
+    with pytest.raises(ValueError):
+        solver.solve_many(problem, n_trajectories=1)
+
+    result = solver.solve_many(problem, n_trajectories=None)
+    
+    assert result['solution_values'].ndim == 3
+    assert result['solution_values'].shape[0] == n_copies

@@ -58,6 +58,7 @@ def E2(alpha, beta=None) -> poly:
     Example
     -------
     Compute variance of integral of Wiener process with respect to itself on interval [0,1].
+    
     >>> import pychastic.wiener_integral_moments
     >>> mean = pychastic.wiener_integral_moments.E([1,1])(1)
     >>> mean_square = pychastic.wiener_integral_moments.E2([1,1])(1)
