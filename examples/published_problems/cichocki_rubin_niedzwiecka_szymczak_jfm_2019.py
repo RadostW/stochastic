@@ -56,7 +56,7 @@ problem = pychastic.sde_problem.SDEProblem(
         ),
         (3 * n_beads,),
     ),
-    tmax=80000.0
+    tmax=8000.0
     #tmax=800.0
 )
 
@@ -64,7 +64,7 @@ problem = pychastic.sde_problem.SDEProblem(
 # Compute trajectories
 
 solver = pychastic.sde_solver.SDESolver(dt=0.2)
-chunk_size = 100
+chunk_size = 40
 trajectories = solver.solve_many(
     problem, n_trajectories=2 ** 10, chunk_size=chunk_size, chunks_per_randomization=1, seed = 2
 )
@@ -202,16 +202,17 @@ print(f"{centre_acf_estimate=} {centre_acf_estimate * ma.pi=}")
 
 
 print("===========")
-print(f"Cichocki: {mstdc_estimate:.5f}")
-print(f"OLS fit:  {float(centre_apparent['a']) * ma.pi:.5f} +- {float(centre_apparent['sigma_a']) * ma.pi:.5f}")
-print(f"ACF:      {centre_acf_estimate * ma.pi:.5f}")
+print(f"Minimal short time: {mstdc_estimate:.5f}")
+print(f"OLS fit to rmsd:    {float(centre_apparent['a']) * ma.pi:.5f} +- {float(centre_apparent['sigma_a']) * ma.pi:.5f}")
+print(f"ACF method:         {centre_acf_estimate * ma.pi:.5f}")
+print(f"JFM reported:       {0.2898:.5f}")
 print("===========")
 
 #
 # plotting
 #
 
-window = 100
+window = 1
 
 plt.plot(
     moving_average(trajectories["time_values"][0], n=window),
@@ -237,4 +238,21 @@ plt.plot(
 plt.xlabel(r"Dimensionless time ($t/\tau$)")
 plt.ylabel(r"Apparent diffusion coefficient")
 
-#plt.show()
+plt.show()
+
+
+plt.plot(
+    moving_average(trajectories["time_values"][0], n=window),
+    moving_average(small_bead_msd, n=window),
+)
+
+plt.plot(
+    moving_average(trajectories["time_values"][0], n=window),
+    moving_average(big_bead_msd, n=window),
+)
+
+plt.plot(
+    moving_average(trajectories["time_values"][0], n=window),
+    moving_average(centre_msd, n=window),
+)
+plt.show()

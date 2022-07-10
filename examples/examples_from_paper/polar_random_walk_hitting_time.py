@@ -105,9 +105,11 @@ def analyze_solver(solver, plots=False):
 
 
 #schemes = ['euler', 'milstein', 'wagner_platen']
-schemes = ["euler", "milstein"]
-n_steps_list = 2 ** np.arange(3, 5)
+schemes = ["wagner_platen"]
+n_steps_list = [int(x) for x in 1.5 ** np.arange(3, 20)]
 results = []
+
+disp = dict()
 
 for scheme in schemes:
     for n_steps in n_steps_list:
@@ -115,7 +117,8 @@ for scheme in schemes:
         dt = problem.tmax / n_steps
         solver = pychastic.sde_solver.SDESolver(dt=dt, scheme=scheme)
         result = analyze_solver(solver)
-        print(f"{result['hit_time_mean']=}")
+        print(f"{result['hit_time_mean']-0.5=}")
+        print(f"+-{result['hit_time_mean_std']=}")
         #print(f"{result['hit_place_x_mean']=}")
         data = {
             k: v
@@ -125,5 +128,7 @@ for scheme in schemes:
         data["scheme"] = scheme
         data["n_steps"] = n_steps
         results.append(data)
+        disp[n_steps] = result['hit_time_mean']
+    [print("{" + f"{k},{v}" +"}") for k,v in disp.items()]
 
 
