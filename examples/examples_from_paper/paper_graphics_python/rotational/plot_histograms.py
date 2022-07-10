@@ -34,7 +34,7 @@ plt.plot(hist_teo[:,0],hist_teo[:,1], '--k' , label = 'SO(3) symmetric')
 
 plt.xticks((np.pi/4)*np.arange(5), ['$0$', '$\pi/4$', '$\pi/2$', '$3\pi/4$','$\pi$'])
 
-plt.xlabel(r"Rotation angle")
+plt.xlabel(r"Rotation angle $\Phi$")
 plt.ylabel(r"Probability density function")
 
 plt.tight_layout()
