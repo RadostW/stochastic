@@ -30,19 +30,19 @@ plt.rcParams.update({
 })
 
 plt.plot(curve_1[:,0],curve_1[:,1], 'C0', label = 'Pychastic')
-plt.plot(curve_2[:,0],curve_2[:,1], 'C1', label = 'Evensen et al (2008)')
+plt.plot(np.insert(curve_2[:,0], 0, 0), np.insert(curve_2[:,1], 0, 0), 'C1', label = 'Evensen et al (2008)')
 
 plt.plot(curve_3[:,0],curve_3[:,1], 'C0')
-plt.plot(curve_4[:,0],curve_4[:,1], 'C1')
+plt.plot(np.insert(curve_4[:,0], 0, 0), np.insert(curve_4[:,1], 0, 0), 'C1')
 plt.plot(curve_5[:,0],curve_5[:,1], 'C0')
-plt.plot(curve_6[:,0],curve_6[:,1], 'C1')
+plt.plot(np.insert(curve_6[:,0], 0, 0), np.insert(curve_6[:,1], 0, 0), 'C1')
 
 plt.plot(curve_teo[:,0],curve_teo[:,1], '--k' , label = 'Cichocki et al (2015)')
 
 plt.xlim([0.0,2.0])
 plt.ylim([0.0,0.28])
 
-plt.xlabel(r"Time [$k_B T / (\pi \eta d^3)$]")
+plt.xlabel(r"Time $t$ [$\pi \eta d^3 / k_B T$]")
 plt.ylabel(r"Modified rotation variance")
 
 plt.tight_layout()
