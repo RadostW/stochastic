@@ -25,7 +25,7 @@ def u_ene(x):  # potential energy shape
     distance_ab = jnp.sqrt(jnp.sum((locations[0] - locations[1]) ** 2))
     distance_bc = jnp.sqrt(jnp.sum((locations[1] - locations[2]) ** 2))
     distance_cd = jnp.sqrt(jnp.sum((locations[2] - locations[3]) ** 2))
-    ene = (
+    ene = 0.5*(
         spring_constant * (distance_ab - equilibrium_dist) ** 2
         + spring_constant * (distance_bc - equilibrium_dist) ** 2
         + spring_constant * (distance_cd - equilibrium_dist) ** 2
@@ -155,6 +155,8 @@ small_bead_instant_diffusion = jnp.ediff1d(small_bead_msd, to_end=float("nan")) 
     solver.dt * chunk_size
 )
 
+np.savetxt("small_bead_msd.csv",np.array(small_bead_msd), delimiter=",")
+
 (s_len, t_len, d_len) = trajectories["solution_values"].shape
 centre_trajectories = jnp.sum(
     trajectories["solution_values"].reshape(s_len, t_len, n_beads, 3)
@@ -173,6 +175,8 @@ np.savetxt("centre_msd.csv",np.array(centre_msd), delimiter=",")
 centre_instant_diffusion = jnp.ediff1d(centre_msd, to_end=float("nan")) / (
     solver.dt * chunk_size
 )
+
+np.savetxt("time.csv",trajectories["time_values"][0], delimiter=',')
 
 big_bead_apparent = least_squares(trajectories["time_values"][0], big_bead_msd)
 small_bead_apparent = least_squares(trajectories["time_values"][0], small_bead_msd)
@@ -244,8 +248,6 @@ plt.plot(
 plt.plot(
     [0.0, problem.tmax], [0.2919 * (1.0 / ma.pi), 0.2919 * (1.0 / ma.pi)]
 )  # clever approximation Cichocki et al -- theory
-plt.xlabel(r"Dimensionless time ($t/\tau$)")
-plt.ylabel(r"Apparent diffusion coefficient")
 
 plt.show()
 
@@ -264,4 +266,10 @@ plt.plot(
     moving_average(trajectories["time_values"][0], n=window),
     moving_average(centre_msd, n=window),
 )
+
+time = trajectories["time_values"][0]
+plt.plot(time,(0.2898/np.pi)*time, '--k' , label = 'Cichocki et al (2019)')
+
+plt.xlabel(r"Dimensionless time ($t/\tau$)")
+plt.ylabel(r"Apparent diffusion coefficient")
 plt.show()
