@@ -130,7 +130,7 @@ Simulating scalar SDEs
   >>> plt.plot(trajectory['time_values'],trajectory['solution_values'])
   >>> plt.show()
 
-#### TODO ##### improve example, add plot
+.. image:: near_wall_minimal.png
 
 The ``SDEProblem`` constructor takes two callables (functions) as arguments. 
 First one describes the drift term, second one describes the noise term. In 
@@ -212,8 +212,6 @@ Given the :math:`\mu` tensor we can express dynamics of all spheres as
 
 .. math::
     dX_{ai} = \mu_{abij} \partial_{bj} U(X) dt + \sqrt{2 k_b T \mu_{abij}} dW_{ai} + k_bT \partial_{bj} \mu_{abij} dt
-
-##### TODO ###### Check if Yakamawa approximation is divergence free.
 
 Where :math:`U` denotes potential energy dependent on locations of all beads. It
 turns out that Rotne-Prager-Yakamawa is particularly convenient for us as the 
