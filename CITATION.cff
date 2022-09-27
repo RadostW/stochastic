@@ -1,4 +1,4 @@
-cff-version 1.2.0
+cff-version: 1.2.0
 message: "If you use Pychastic, please cite it as below."
 authors:
 - family-names: "Waszkiewicz"
