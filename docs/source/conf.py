@@ -60,6 +60,7 @@ html_sidebars = {
    'optionpricing': [],  # Hide sidebar
    'moleculardynamics': [],  # Hide sidebar
    'examples': [],  # Hide sidebar
+   'advancedfeatures': [],  # Hide sidebar
 }
 
 

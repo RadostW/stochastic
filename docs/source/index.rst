@@ -5,8 +5,9 @@ Pychastic Documentation
    :hidden:
    :maxdepth: 1
    
-   Tutorial (derivatives pricing) <optionpricing>
    Tutorial (molecular dynamics) <moleculardynamics>
+   Tutorial (derivatives pricing) <optionpricing>
+   Advanced features <advancedfeatures>
    Minimal examples <examples>
    Detailed reference <reference>
 
@@ -34,8 +35,8 @@ and you'll be good to go.
 Next steps
 ''''''''''
 
-* :doc:`Tutorial - derivatives pricing  themed<optionpricing>`.
 * :doc:`Tutorial - molecular dynamics themed<moleculardynamics>`.
+* :doc:`Tutorial - derivatives pricing themed<optionpricing>`.
 * :doc:`Advanced features <advancedfeatures>`.
 * :doc:`Examples <examples>`.
 
