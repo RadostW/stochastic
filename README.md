@@ -30,4 +30,7 @@ This software is licensed under MIT license
 Copyright (c) Radost Waszkiewicz and Maciej Bartczak (2021).
 
 
+# How to cite
 
+Waszkiewicz, R., Bartczak M., Kolasa K. and Lisicki M. *Pychastic: Precise Brownian Dynamics using 
+Taylor-Ito integrators in Python*; Sci-Post (submitted) (2022)
