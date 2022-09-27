@@ -1,19 +1,25 @@
 cff-version: 1.2.0
 message: "If you use Pychastic, please cite it as below."
+
 authors:
 - family-names: "Waszkiewicz"
   given-names: "Radost"
-  orcid: "https://orcid.org/0000-0002-0376-1708
+  orcid: "https://orcid.org/0000-0002-0376-1708"
+  
 - family-names: "Bartczak"
   given-names: "Maciej"
-  orcid: "https://orcid.org/0000-0003-1081-3294
+  orcid: "https://orcid.org/0000-0003-1081-3294"
+  
 - family-names: "Kolasa"
   given-names: "Kamil"
-  orcid: "https://orcid.org/0000-0002-2281-1539
+  orcid: "https://orcid.org/0000-0002-2281-1539"
+  
 - family-names: "Lisicki"
   given-names: "Maciej"
-  orcid: "https://orcid.org/0000-0002-6976-0281
+  orcid: "https://orcid.org/0000-0002-6976-0281"
+  
 title: "Pychastic: Precise Brownian Dynamics using Taylor-Ito integrators in Python"
+
 doi: 10.48550/arXiv.2209.04332
 date-released: 2022-09-09
 url: "https://github.com/RadostW/stochastic"
