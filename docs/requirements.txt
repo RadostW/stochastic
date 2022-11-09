@@ -14,7 +14,7 @@ sphinxcontrib-serializinghtml==1.1.5
 jax==0.2.13
 jaxlib==0.1.66
 matplotlib==3.4.2
-numpy==1.22
+numpy
 tqdm==4.60.0
 sortedcontainers==2.3.0
 
