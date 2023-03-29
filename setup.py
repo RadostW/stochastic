@@ -4,7 +4,7 @@ with open('README.md') as f:
     long_description = f.read()
 
 setup(name='pychastic',
-      version='0.2.0',
+      version='0.2.1',
       description='Solvers for stochastic differential equations',
       url='https://github.com/RadostW/stochastic',
       author='Radost Waszkiewicz & Maciej Bartczak',
