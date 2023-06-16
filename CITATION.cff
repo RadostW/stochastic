@@ -21,6 +21,11 @@ authors:
   
 title: "Pychastic: Precise Brownian Dynamics using Taylor-Ito integrators in Python"
 
-doi: 10.48550/arXiv.2209.04332
+doi: 10.21468/SciPostPhysCodeb.11
 date-released: 2022-09-09
-url: "https://github.com/RadostW/stochastic"
+url: "https://scipost.org/10.21468/SciPostPhysCodeb.11"
+
+publisher: SciPost
+pages: 11
+year: 2023
+journal: SciPost Phys. Codebases

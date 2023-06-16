@@ -32,6 +32,15 @@ Easiest way to get the package from PyPi is using pip. Simply run:
 
 and you'll be good to go.
 
+
+How to cite
+'''''''''''
+| *Pychastic: Precise Brownian dynamics using Taylor-Itō integrators in Python*
+| Radost Waszkiewicz, Maciej Bartczak, Kamil Kolasa, Maciej Lisicki
+| SciPost Phys. Codebases 11 **(2023)**
+| `doi.org/10.21468/SciPostPhysCodeb.11 <https://scipost.org/10.21468/SciPostPhysCodeb.11>`_.
+
+
 Next steps
 ''''''''''
 
