@@ -141,7 +141,7 @@ def make_D_mat(eta, zeta):
         # Non jit-friendly implementation
         # illegal = jnp.logical_or(idx > p,idx < 1)
         # return tensor[..., idx-1].at[..., illegal].set(fill)
-        legalized_idx = jnp.clip(idx, a_min=1, a_max=p)
+        legalized_idx = jnp.clip(idx, min=1, max=p)
         illegal_mask = jnp.logical_or(idx > p, idx < 1)
         return (
             tensor[..., legalized_idx - 1] * (1 - 1 * illegal_mask)

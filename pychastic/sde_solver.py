@@ -4,7 +4,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import tqdm
-from jax.experimental.host_callback import id_tap
+import jax.debug
+import jax.tree_util
 from pychastic.sde_problem import SDEProblem
 from pychastic.vectorized_I_generation import get_wiener_integrals
 
@@ -262,7 +263,7 @@ class SDESolver:
         def chunk_function(chunk_start, wieners_chunk):
             # Parameters: chunk_start = (t0, x0, w0) values at beggining of chunk
             #             wieners_chunk = array of wiener increments
-            id_tap(tap_func,0)
+            jax.debug.callback(tap_func,0)
             z = jax.lax.scan( scan_func , chunk_start , wieners_chunk )[0] #discard trajectory at chunk resolution
             return z, z
 
@@ -272,7 +273,7 @@ class SDESolver:
             last_state , (time_values, solution_values, wiener_values) = jax.lax.scan(
                 chunk_function,
                 starting_state,
-                jax.tree_map(lambda x: jnp.reshape(x,(-1,chunk_size)+x.shape[1:]), wiener_integrals)
+                jax.tree_util.tree_map(lambda x: jnp.reshape(x,(-1,chunk_size)+x.shape[1:]), wiener_integrals)
             ) #discard carry, remember trajectory
 
             return (
@@ -291,7 +292,7 @@ class SDESolver:
                 jax.random.split(key, number_of_chunks // chunks_per_randomization)
                 )
 
-            return jax.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
+            return jax.tree_util.tree_map(lambda x: x.reshape((-1,)+x.shape[2:]),chunked_solution) #combine big chunks into one trajectory
         
         get_solution = jax.vmap(get_solution, in_axes=(0, 0))
 
@@ -354,7 +355,7 @@ class SDESolver:
             
         """
         solution = self.solve_many(problem, n_trajectories=1, seed=seed, chunk_size = chunk_size, chunks_per_randomization = chunks_per_randomization, progress_bar = progress_bar)
-        solution = jax.tree_map(lambda x: x[0], solution)
+        solution = jax.tree_util.tree_map(lambda x: x[0], solution)
         return solution
 
 if __name__ == '__main__':
