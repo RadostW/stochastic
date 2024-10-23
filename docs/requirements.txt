@@ -13,8 +13,8 @@ sphinxcontrib-napoleon==0.7
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 
-jax==0.3.25
-jaxlib==0.3.25
+jax==0.4.35
+jaxlib==0.4.35
 
 matplotlib==3.6.2
 numpy
