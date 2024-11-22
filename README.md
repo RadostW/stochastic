@@ -33,4 +33,14 @@ Copyright (c) Radost Waszkiewicz and Maciej Bartczak (2021).
 # How to cite
 
 Waszkiewicz, R., Bartczak M., Kolasa K. and Lisicki M. *Pychastic: Precise Brownian Dynamics using 
-Taylor-Ito integrators in Python*; Sci-Post (submitted) (2022)
+Taylor-Ito integrators in Python*; SciPost Physics Codebases (2023)
+
+```bibtex
+@article{Waszkiewicz_2023,
+	title        = {Pychastic: Precise Brownian dynamics using Taylor-It{\=o} integrators in Python},
+	author       = {Waszkiewicz, Radost and Bartczak, Maciej and Kolasa, Kamil and Lisicki, Maciej},
+	year         = 2023,
+	journal      = {SciPost Physics Codebases},
+	pages        = {11}
+}
+```
