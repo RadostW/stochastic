@@ -170,6 +170,19 @@ class SDESolver:
                     raise ValueError
             return f
 
+        id_ = lambda x: x
+
+        f_w = L(id_, "w")
+
+        f_t = L(id_, "t")
+        f_ww = L(id_, "ww")
+
+        f_tw = L(id_, "tw")
+        f_wt = L(id_, "wt")
+        f_www = L(id_, "www")
+
+        f_tt = L(id_, "tt")
+
         def step(
             x,
             d_t,
@@ -180,19 +193,6 @@ class SDESolver:
             d_www=jax.numpy.zeros((noise_terms, noise_terms, noise_terms)),
             scheme="euler",
         ):
-
-            id_ = lambda x: x
-
-            f_w = L(id_, "w")
-
-            f_t = L(id_, "t")
-            f_ww = L(id_, "ww")
-
-            f_tw = L(id_, "tw")
-            f_wt = L(id_, "wt")
-            f_www = L(id_, "www")
-
-            f_tt = L(id_, "tt")
 
             new_x = x
             new_x += (f_t(x)*d_t).squeeze() + contract_all(f_w(x), d_w)
